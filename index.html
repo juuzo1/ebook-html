@@ -374,7 +374,56 @@
   }
   .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
   .tab:not(.active):hover { color: var(--text-primary); border-color: var(--text-muted); }
-  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.25rem; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem; }
+
+  /* PAGINATION */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 0.7rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-btn:hover:not(:disabled):not(.active) {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .page-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: white;
+    border-color: transparent;
+    font-weight: 700;
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .page-ellipsis {
+    color: var(--text-muted);
+    padding: 0 0.4rem;
+    user-select: none;
+  }
+  @media (max-width: 480px) {
+    .page-btn { min-width: 34px; height: 34px; font-size: 0.85rem; padding: 0 0.5rem; }
+  }
   .card { cursor: pointer; transition: transform var(--transition); }
   .card:hover { transform: translateY(-4px); }
   .card-cover {
@@ -517,8 +566,12 @@
   }
   .back-to-top.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
   .back-to-top:hover { background: var(--accent-hover); transform: translateY(-2px); }
+  @media (max-width: 1280px) {
+    .grid { grid-template-columns: repeat(4, 1fr); }
+  }
   @media (max-width: 1024px) {
-    .grid, .carousel-slide { grid-template-columns: repeat(4, 1fr); }
+    .grid { grid-template-columns: repeat(3, 1fr); }
+    .carousel-slide { grid-template-columns: repeat(4, 1fr); }
     .nav-menu, .search-wrap, .user-pill { display: none; }
     .hamburger { display: flex; }
     .mobile-menu { display: block; }
@@ -650,7 +703,7 @@
     <span class="section-meta">Vừa cập nhật trong tuần</span>
   </div>
   <div class="grid" id="grid-new"></div>
-  <div class="see-more"><button class="btn-more">Xem thêm →</button></div>
+  <div class="pagination" id="pagination-new"></div>
 </section>
 
 <section class="section">
@@ -662,7 +715,7 @@
     <span class="section-meta">Đang được quan tâm</span>
   </div>
   <div class="grid" id="grid-hot"></div>
-  <div class="see-more"><button class="btn-more">Xem thêm →</button></div>
+  <div class="pagination" id="pagination-hot"></div>
 </section>
 
 <section class="section">
@@ -674,7 +727,7 @@
     <span class="section-meta">Đọc trọn vẹn, không gián đoạn</span>
   </div>
   <div class="grid" id="grid-done"></div>
-  <div class="see-more"><button class="btn-more">Xem thêm →</button></div>
+  <div class="pagination" id="pagination-done"></div>
 </section>
 
 <footer id="footer">
@@ -790,10 +843,10 @@ async function loadAllStories() {
     dataTop = allStories.slice(0, 18);
   }
 
-  // Các section khác
-  dataNew = allStories.filter(s => s.isNew).slice(0, 24);
-  dataHot = allStories.filter(s => s.hot).slice(0, 24);
-  dataDone = allStories.filter(s => s.done).slice(0, 24);
+  // Các section khác: lấy hết, pagination sẽ chia trang
+  dataNew = allStories.filter(s => s.isNew);
+  dataHot = allStories.filter(s => s.hot);
+  dataDone = allStories.filter(s => s.done);
 
   // Load user bookmarks trước khi render (để hiện đúng trạng thái icon bookmark)
   await loadUserBookmarks();
@@ -841,11 +894,117 @@ function applyFilter(list) {
   return list;
 }
 
+// Pagination state cho 3 section
+const PAGE_SIZE = 25;
+let pageState = { new: 1, hot: 1, done: 1 };
+
 function renderAll() {
   renderCarousel();
-  renderCards('grid-new', applyFilter(dataNew));
-  renderCards('grid-hot', applyFilter(dataHot));
-  renderCards('grid-done', applyFilter(dataDone));
+  renderSection('grid-new', 'pagination-new', applyFilter(dataNew), 'new');
+  renderSection('grid-hot', 'pagination-hot', applyFilter(dataHot), 'hot');
+  renderSection('grid-done', 'pagination-done', applyFilter(dataDone), 'done');
+}
+
+function renderSection(gridId, paginationId, items, key) {
+  const el = document.getElementById(gridId);
+  const paginationEl = document.getElementById(paginationId);
+  if (!el) return;
+
+  if (items.length === 0) {
+    el.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Chưa có truyện nào</div>`;
+    if (paginationEl) paginationEl.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(items.length / PAGE_SIZE);
+  if (pageState[key] > totalPages) pageState[key] = totalPages;
+  if (pageState[key] < 1) pageState[key] = 1;
+  const start = (pageState[key] - 1) * PAGE_SIZE;
+  const pageItems = items.slice(start, start + PAGE_SIZE);
+
+  el.innerHTML = pageItems.map((item, i) => cardHTML(item, i)).join('');
+
+  // Bind handlers
+  el.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
+    link.addEventListener('click', () => {
+      const storyId = parseInt(link.dataset.storyId);
+      sb.rpc('increment_view_count', { story_id_input: storyId }).then(() => {});
+      sb.from('story_views').insert({ story_id: storyId }).then(() => {});
+    });
+  });
+  el.querySelectorAll('.card-bookmark').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.storyId);
+      await toggleBookmark(id, btn);
+    });
+  });
+
+  // Pagination
+  if (paginationEl) {
+    renderPaginationSection(paginationEl, totalPages, pageState[key], (newPage) => {
+      pageState[key] = newPage;
+      renderSection(gridId, paginationId, items, key);
+      // Scroll lên đầu section
+      el.closest('.section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+}
+
+function renderPaginationSection(el, totalPages, current, onChange) {
+  if (totalPages <= 1) {
+    el.innerHTML = '';
+    return;
+  }
+  const pages = [];
+  pages.push(1);
+  if (current > 3) pages.push('...');
+  for (let i = Math.max(2, current - 1); i <= Math.min(totalPages - 1, current + 1); i++) {
+    pages.push(i);
+  }
+  if (current < totalPages - 2) pages.push('...');
+  if (totalPages > 1) pages.push(totalPages);
+
+  let html = `<button class="page-btn" data-act="prev" ${current === 1 ? 'disabled' : ''}>‹</button>`;
+  pages.forEach(p => {
+    if (p === '...') {
+      html += `<span class="page-ellipsis">…</span>`;
+    } else {
+      html += `<button class="page-btn ${p === current ? 'active' : ''}" data-page="${p}">${p}</button>`;
+    }
+  });
+  html += `<button class="page-btn" data-act="next" ${current === totalPages ? 'disabled' : ''}>›</button>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll('.page-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => onChange(parseInt(btn.dataset.page)));
+  });
+  el.querySelector('[data-act="prev"]')?.addEventListener('click', () => onChange(current - 1));
+  el.querySelector('[data-act="next"]')?.addEventListener('click', () => onChange(current + 1));
+}
+
+// Giữ lại renderCards cũ cho carousel (đã có sẵn)
+function renderCards(containerId, items) {
+  // Hàm này không còn dùng cho 3 section chính, chỉ giữ phòng hờ
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = items.map((item, i) => cardHTML(item, i)).join('');
+  el.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
+    link.addEventListener('click', () => {
+      const id = parseInt(link.dataset.storyId);
+      sb.rpc('increment_view_count', { story_id_input: id }).then(() => {});
+      sb.from('story_views').insert({ story_id: id }).then(() => {});
+    });
+  });
+  el.querySelectorAll('.card-bookmark').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.storyId);
+      await toggleBookmark(id, btn);
+    });
+  });
 }
 
 // User bookmarks set (load từ DB)
@@ -910,33 +1069,6 @@ function cardHTML(item, i) {
       </div>
     </div>
   `;
-}
-
-function renderCards(containerId, items) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (items.length === 0) {
-    el.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Chưa có truyện nào</div>`;
-  } else {
-    el.innerHTML = items.map((item, i) => cardHTML(item, i)).join('');
-  }
-  // Gắn handler track click cho từng card-cover
-  el.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
-    link.addEventListener('click', async () => {
-      const storyId = parseInt(link.dataset.storyId);
-      sb.rpc('increment_view_count', { story_id_input: storyId }).then(() => {});
-      sb.from('story_views').insert({ story_id: storyId }).then(() => {});
-    });
-  });
-  // Bookmark buttons
-  el.querySelectorAll('.card-bookmark').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = parseInt(btn.dataset.storyId);
-      await toggleBookmark(id, btn);
-    });
-  });
 }
 
 // ===== CAROUSEL: Được Đọc Nhiều =====

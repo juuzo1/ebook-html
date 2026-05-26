@@ -256,8 +256,66 @@
   .meta-count strong { color: var(--gold); font-weight: 700; }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 1.5rem;
+  }
+  @media (max-width: 1024px) {
+    .grid { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  }
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 0.85rem; }
+  }
+
+  /* PAGINATION */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2.5rem;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 0.7rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-btn:hover:not(:disabled):not(.active) {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .page-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: white;
+    border-color: transparent;
+    font-weight: 700;
+  }
+  .page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .page-ellipsis {
+    color: var(--text-muted);
+    padding: 0 0.4rem;
+    user-select: none;
+  }
+  @media (max-width: 480px) {
+    .page-btn { min-width: 34px; height: 34px; font-size: 0.85rem; padding: 0 0.5rem; }
   }
 
   /* CARD */
@@ -520,7 +578,6 @@
     .page-header { padding: 2rem 1rem 1rem; }
     .controls { padding: 0 1rem 1rem; }
     .grid-section { padding: 0 1rem 3rem; }
-    .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
     .card-title { font-size: 0.88rem; padding: 0.65rem 0.65rem 0.3rem; }
     .card-meta { padding: 0 0.65rem 0.65rem; font-size: 0.72rem; }
   }
@@ -607,9 +664,11 @@
 </div>
 
 <script>
-let bookmarkedStories = [];  // mảng truyện đã bookmark (đã join với stories và genres)
+let bookmarkedStories = [];
 let allGenres = [];
 let displayed = [];
+let currentPage = 1;
+const PAGE_SIZE = 25;
 
 function formatViews(n) {
   if (!n) return '0';
@@ -662,7 +721,7 @@ async function loadData() {
   applyFilterAndRender();
 }
 
-function applyFilterAndRender() {
+function applyFilterAndRender(resetPage = true) {
   let list = bookmarkedStories;
 
   // Search
@@ -682,6 +741,7 @@ function applyFilterAndRender() {
   }
 
   displayed = list;
+  if (resetPage) currentPage = 1;
   document.getElementById('totalCount').textContent = list.length;
   renderGrid();
 }
@@ -712,7 +772,14 @@ function renderGrid() {
     return;
   }
 
-  container.innerHTML = '<div class="grid">' + displayed.map((s, i) => {
+  // Pagination
+  const totalPages = Math.ceil(displayed.length / PAGE_SIZE);
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = displayed.slice(start, start + PAGE_SIZE);
+
+  const gridHTML = '<div class="grid">' + pageItems.map((s, i) => {
     const genre = allGenres.find(g => g.id === s.genre_id);
     return `
       <div class="card" style="animation-delay: ${Math.min(i, 15) * 0.03}s">
@@ -739,6 +806,33 @@ function renderGrid() {
     `;
   }).join('') + '</div>';
 
+  // Pagination HTML
+  let paginationHTML = '';
+  if (totalPages > 1) {
+    const pages = [];
+    pages.push(1);
+    if (currentPage > 3) pages.push('...');
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pages.push(i);
+    }
+    if (currentPage < totalPages - 2) pages.push('...');
+    if (totalPages > 1) pages.push(totalPages);
+
+    paginationHTML = `<div class="pagination">`;
+    paginationHTML += `<button class="page-btn" id="pagePrev" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+    pages.forEach(p => {
+      if (p === '...') {
+        paginationHTML += `<span class="page-ellipsis">…</span>`;
+      } else {
+        paginationHTML += `<button class="page-btn ${p === currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+      }
+    });
+    paginationHTML += `<button class="page-btn" id="pageNext" ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+    paginationHTML += `</div>`;
+  }
+
+  container.innerHTML = gridHTML + paginationHTML;
+
   // Bind events
   container.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
     link.addEventListener('click', () => {
@@ -756,6 +850,18 @@ function renderGrid() {
       await removeBookmark(id);
     });
   });
+
+  container.querySelectorAll('.page-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => goToPage(parseInt(btn.dataset.page)));
+  });
+  document.getElementById('pagePrev')?.addEventListener('click', () => goToPage(currentPage - 1));
+  document.getElementById('pageNext')?.addEventListener('click', () => goToPage(currentPage + 1));
+}
+
+function goToPage(p) {
+  currentPage = p;
+  renderGrid();
+  document.querySelector('.grid-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function removeBookmark(storyId) {
