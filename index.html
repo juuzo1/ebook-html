@@ -413,6 +413,37 @@
   }
   .card-badge.hot { background: var(--danger); color: white; }
   .card-badge.done { background: var(--teal); color: #0a0e1a; }
+
+  .card-bookmark {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all var(--transition);
+    z-index: 3;
+    opacity: 0;
+  }
+  .card:hover .card-bookmark { opacity: 1; }
+  .card-bookmark.active {
+    opacity: 1;
+    background: var(--gold);
+  }
+  .card-bookmark:hover {
+    background: var(--gold);
+    transform: scale(1.1);
+  }
+  .card-bookmark.active:hover {
+    background: var(--danger);
+  }
   .card-title {
     font-family: var(--font-body); font-weight: 600; font-size: 0.9rem;
     color: var(--text-primary); line-height: 1.3; margin-bottom: 0.25rem;
@@ -548,7 +579,7 @@
         <span id="userName">Hồ Sơ</span>
         <div class="user-dropdown" id="userDropdown">
           <a href="admin.html" id="adminLink" style="display:none">⚙️ Trang Admin</a>
-          <a href="#bookmarks">🔖 Bookmark</a>
+          <a href="bookmarks.html">🔖 Bookmark</a>
           <a href="login.html" id="logoutLink">🚪 Đăng xuất</a>
         </div>
       </div>
@@ -579,7 +610,7 @@
   </div>
   <div class="mobile-menu-section">Tài khoản</div>
   <a href="admin.html" id="mobileAdminLink" style="display:none">⚙️ Trang Admin</a>
-  <a href="#bookmarks">🔖 Bookmark</a>
+  <a href="bookmarks.html">🔖 Bookmark</a>
   <a href="#footer">📧 Liên Hệ</a>
   <a href="login.html">🚪 Đăng Xuất</a>
 </aside>
@@ -764,6 +795,9 @@ async function loadAllStories() {
   dataHot = allStories.filter(s => s.hot).slice(0, 24);
   dataDone = allStories.filter(s => s.done).slice(0, 24);
 
+  // Load user bookmarks trước khi render (để hiện đúng trạng thái icon bookmark)
+  await loadUserBookmarks();
+
   // Cập nhật menu Thể Loại trong navbar
   updateGenreMenus();
 
@@ -776,24 +810,19 @@ function updateGenreMenus() {
   const desktopMenu = document.querySelector('.dropdown-menu');
   const mobileSubmenu = document.querySelector('.mobile-menu .submenu');
   if (desktopMenu) {
-    desktopMenu.innerHTML = allGenres.map(g =>
-      `<a href="#" data-genre-id="${g.id}">${g.icon} ${g.name}</a>`
-    ).join('');
+    desktopMenu.innerHTML =
+      `<a href="category.html">📚 Tất cả thể loại</a>` +
+      allGenres.map(g =>
+        `<a href="category.html?genre=${g.slug}">${g.icon} ${g.name}</a>`
+      ).join('');
   }
   if (mobileSubmenu) {
-    mobileSubmenu.innerHTML = allGenres.map(g =>
-      `<a href="#" data-genre-id="${g.id}">${g.icon} ${g.name}</a>`
-    ).join('');
+    mobileSubmenu.innerHTML =
+      `<a href="category.html">📚 Tất cả</a>` +
+      allGenres.map(g =>
+        `<a href="category.html?genre=${g.slug}">${g.icon} ${g.name}</a>`
+      ).join('');
   }
-
-  // Click handlers cho menu thể loại
-  document.querySelectorAll('[data-genre-id]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const gid = parseInt(link.dataset.genreId);
-      filterByGenre(gid);
-    });
-  });
 }
 
 let filterGenreId = null;
@@ -819,7 +848,46 @@ function renderAll() {
   renderCards('grid-done', applyFilter(dataDone));
 }
 
+// User bookmarks set (load từ DB)
+let userBookmarks = new Set();
+
+async function loadUserBookmarks() {
+  if (!__session) return;
+  const { data } = await sb.from('bookmarks').select('story_id');
+  userBookmarks = new Set((data || []).map(b => b.story_id));
+}
+
+async function toggleBookmark(storyId, btn) {
+  if (!__session) return;
+  const isBm = userBookmarks.has(storyId);
+  btn.disabled = true;
+  try {
+    if (isBm) {
+      const { error } = await sb.from('bookmarks').delete()
+        .eq('user_id', __session.id).eq('story_id', storyId);
+      if (error) throw error;
+      userBookmarks.delete(storyId);
+      btn.classList.remove('active');
+      btn.querySelector('svg').setAttribute('fill', 'none');
+      btn.title = 'Lưu bookmark';
+    } else {
+      const { error } = await sb.from('bookmarks').insert({
+        user_id: __session.id, story_id: storyId
+      });
+      if (error) throw error;
+      userBookmarks.add(storyId);
+      btn.classList.add('active');
+      btn.querySelector('svg').setAttribute('fill', 'currentColor');
+      btn.title = 'Bỏ bookmark';
+    }
+  } catch (err) {
+    console.error('Bookmark error:', err);
+  }
+  btn.disabled = false;
+}
+
 function cardHTML(item, i) {
+  const bookmarked = userBookmarks.has(item.id);
   return `
     <div class="card" style="animation-delay: ${Math.min(i, 11) * 0.04}s">
       <a href="${item.link}" target="_blank" rel="noopener" class="card-cover" data-story-id="${item.id}" data-title="${item.t}">
@@ -831,6 +899,9 @@ function cardHTML(item, i) {
           <span class="btn-watch">▶ Xem ngay</span>
         </div>
       </a>
+      <button class="card-bookmark ${bookmarked ? 'active' : ''}" data-story-id="${item.id}" title="${bookmarked ? 'Bỏ bookmark' : 'Lưu bookmark'}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="${bookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
       <div class="card-title">${item.t}</div>
       <div class="card-meta">
         <span>${item.g}</span>
@@ -853,9 +924,17 @@ function renderCards(containerId, items) {
   el.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
     link.addEventListener('click', async () => {
       const storyId = parseInt(link.dataset.storyId);
-      // Track view (không cần await để khỏi delay user)
       sb.rpc('increment_view_count', { story_id_input: storyId }).then(() => {});
       sb.from('story_views').insert({ story_id: storyId }).then(() => {});
+    });
+  });
+  // Bookmark buttons
+  el.querySelectorAll('.card-bookmark').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.storyId);
+      await toggleBookmark(id, btn);
     });
   });
 }
@@ -905,6 +984,15 @@ function renderCarousel() {
       const storyId = parseInt(link.dataset.storyId);
       sb.rpc('increment_view_count', { story_id_input: storyId }).then(() => {});
       sb.from('story_views').insert({ story_id: storyId }).then(() => {});
+    });
+  });
+  // Bookmark buttons trong carousel
+  track.querySelectorAll('.card-bookmark').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.storyId);
+      await toggleBookmark(id, btn);
     });
   });
 

@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookmark của tôi — Cổng Light Novel</title>
+<style>html { visibility: hidden; }</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://fkqzwvngyusyuczfakud.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var __session = null;
+
+  (async function() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (!data.session) {
+        window.location.replace('login.html');
+        return;
+      }
+      const userData = await sb.auth.getUser();
+      if (userData.data?.user) {
+        __session = {
+          id: userData.data.user.id,
+          username: userData.data.user.user_metadata?.username || userData.data.user.email.split('@')[0],
+          email: userData.data.user.email,
+          role: userData.data.user.user_metadata?.role || 'user'
+        };
+      }
+      document.documentElement.style.visibility = 'visible';
+    } catch (e) {
+      window.location.replace('login.html');
+    }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-card: #131826;
+    --bg-elevated: #1a2030;
+    --bg-hover: #1f263a;
+    --border: #232a3d;
+    --text-primary: #f0f3f8;
+    --text-secondary: #98a1b3;
+    --text-muted: #5a637a;
+    --accent: #4a7fff;
+    --accent-hover: #6b97ff;
+    --accent-deep: #2952d1;
+    --accent-glow: rgba(74, 127, 255, 0.4);
+    --silver: #c8d2e3;
+    --gold: #d4af37;
+    --danger: #e94560;
+    --success: #4ecdc4;
+    --hot: #ff6b6b;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Inter Tight', system-ui, sans-serif;
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  [data-theme="light"] {
+    --bg-deep: #f5f6f9;
+    --bg-card: #ffffff;
+    --bg-elevated: #f0f2f7;
+    --bg-hover: #e8ebf2;
+    --border: #d8dde6;
+    --text-primary: #1a1f2e;
+    --text-secondary: #4a5168;
+    --text-muted: #8b94a8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  .navbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  [data-theme="light"] .navbar { background: rgba(245, 246, 249, 0.9); }
+  .navbar-inner {
+    max-width: 1400px; margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 2rem;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 900; font-size: 1.5rem;
+    letter-spacing: -0.02em; cursor: pointer;
+    text-decoration: none;
+    background: linear-gradient(135deg, var(--accent), var(--silver));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo i { font-style: italic; }
+  .nav-links { display: flex; gap: 0.5rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-secondary); text-decoration: none;
+    padding: 0.5rem 0.9rem; border-radius: 8px;
+    font-size: 0.92rem; font-weight: 500;
+    transition: all var(--transition);
+  }
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--accent); background: var(--bg-hover);
+  }
+  .nav-right { margin-left: auto; display: flex; gap: 0.75rem; align-items: center; }
+  .theme-toggle, .icon-btn {
+    width: 38px; height: 38px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; cursor: pointer;
+    color: var(--text-secondary);
+    display: grid; place-items: center;
+    transition: all var(--transition);
+  }
+  .theme-toggle:hover, .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .user-pill {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 50px;
+    cursor: pointer; position: relative;
+    transition: all var(--transition);
+  }
+  .user-pill:hover { border-color: var(--accent); }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: white; display: grid; place-items: center;
+    font-weight: 700; font-size: 0.78rem;
+  }
+  .user-pill span { font-size: 0.88rem; font-weight: 500; }
+
+  /* PAGE HEADER */
+  .page-header {
+    max-width: 1400px; margin: 0 auto;
+    padding: 3rem 1.5rem 1.5rem;
+  }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.88rem; color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .breadcrumb a {
+    color: var(--text-secondary); text-decoration: none;
+    transition: color var(--transition);
+  }
+  .breadcrumb a:hover { color: var(--accent); }
+  .breadcrumb-current { color: var(--accent); font-weight: 600; }
+
+  .header-flex {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .page-title .icon { color: var(--gold); }
+  .page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.88rem;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-clear:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .btn-clear:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* SEARCH + STATS */
+  .controls {
+    max-width: 1400px; margin: 0 auto;
+    padding: 0 1.5rem 1.5rem;
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 250px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: all var(--transition);
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2398a1b3' stroke-width='2'%3e%3ccircle cx='11' cy='11' r='8'/%3e%3cline x1='21' y1='21' x2='16.65' y2='16.65'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: 0.9rem center;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .sort-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+  .sort-select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* GRID */
+  .grid-section {
+    max-width: 1400px; margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+  .meta-count {
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  .meta-count strong { color: var(--gold); font-weight: 700; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--bg-card);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all var(--transition);
+    position: relative;
+    cursor: pointer;
+    border: 1px solid transparent;
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 32px rgba(74, 127, 255, 0.15);
+  }
+  .card-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    display: block;
+  }
+  .card-cover img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s var(--transition);
+  }
+  .card:hover .card-cover img { transform: scale(1.08); }
+  .card-badge {
+    position: absolute;
+    top: 0.6rem; left: 0.6rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(74, 127, 255, 0.95);
+    color: white;
+    backdrop-filter: blur(8px);
+  }
+  .card-badge.hot { background: rgba(255, 107, 107, 0.95); }
+  .card-badge.done { background: rgba(78, 205, 196, 0.95); }
+  .bookmark-btn {
+    position: absolute;
+    top: 0.6rem; right: 0.6rem;
+    width: 36px; height: 36px;
+    background: var(--gold);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: grid; place-items: center;
+    transition: all var(--transition);
+    z-index: 3;
+  }
+  .bookmark-btn:hover {
+    background: var(--danger);
+    transform: scale(1.1);
+  }
+  .bookmark-btn svg { fill: white; }
+  .card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(10, 14, 26, 0.95), transparent 50%);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 1rem;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .card:hover .card-overlay { opacity: 1; }
+  .btn-watch {
+    background: var(--accent);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .card-title {
+    padding: 0.85rem 0.85rem 0.4rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    color: var(--text-primary);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .card-meta {
+    padding: 0 0.85rem 0.85rem;
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .card-meta .dot { color: var(--text-muted); }
+  .bookmark-date {
+    padding: 0 0.85rem 0.85rem;
+    font-size: 0.72rem;
+    color: var(--gold);
+    font-style: italic;
+  }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.6;
+  }
+  .empty h3 {
+    font-family: var(--font-display);
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .empty p {
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+  .empty a {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: white;
+    padding: 0.65rem 1.5rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all var(--transition);
+  }
+  .empty a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-glow);
+  }
+
+  /* CONFIRM DIALOG */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
+  .modal h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+  }
+  .modal p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+  .modal-buttons {
+    display: flex; gap: 0.75rem;
+    justify-content: center;
+  }
+  .btn {
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--transition);
+    font-size: 0.9rem;
+  }
+  .btn-ghost {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border-color: var(--border);
+  }
+  .btn-ghost:hover { color: var(--text-primary); }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+  }
+  .btn-danger:hover { opacity: 0.85; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--success);
+    padding: 0.85rem 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    font-size: 0.9rem;
+    z-index: 300;
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .toast.show { display: flex; }
+  .toast.danger { border-left-color: var(--danger); }
+
+  /* USER DROPDOWN */
+  .user-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.5rem;
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all var(--transition);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .user-pill:hover .user-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .user-dropdown a {
+    display: block;
+    padding: 0.6rem 0.85rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    transition: all var(--transition);
+  }
+  .user-dropdown a:hover { background: var(--bg-elevated); color: var(--accent); }
+  .user-dropdown a#logoutLink { color: var(--danger); }
+  .user-dropdown a#adminLink { color: var(--gold); }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .navbar-inner { padding: 0.85rem 1rem; gap: 1rem; }
+    .page-header { padding: 2rem 1rem 1rem; }
+    .controls { padding: 0 1rem 1rem; }
+    .grid-section { padding: 0 1rem 3rem; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+    .card-title { font-size: 0.88rem; padding: 0.65rem 0.65rem 0.3rem; }
+    .card-meta { padding: 0 0.65rem 0.65rem; font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a class="logo" href="index.html">Cổng<i>Light</i>Novel</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Trang Chủ</a></li>
+      <li><a href="category.html">Thể Loại</a></li>
+      <li><a href="bookmarks.html" class="active">Bookmark</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle" title="Đổi theme">
+        <svg id="iconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="iconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <div class="user-pill" id="userPill">
+        <div class="avatar" id="userAvatar">U</div>
+        <span id="userName">User</span>
+        <div class="user-dropdown">
+          <a href="admin.html" id="adminLink" style="display:none">⚙️ Trang Admin</a>
+          <a href="index.html">🏠 Trang chủ</a>
+          <a href="login.html" id="logoutLink">🚪 Đăng xuất</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="page-header">
+  <div class="breadcrumb">
+    <a href="index.html">Trang Chủ</a>
+    <span>›</span>
+    <span class="breadcrumb-current">Bookmark</span>
+  </div>
+  <div class="header-flex">
+    <div>
+      <h1 class="page-title">
+        <span class="icon">🔖</span>
+        <span>Bookmark của tôi</span>
+      </h1>
+      <p class="page-subtitle">Tất cả truyện bạn đã lưu để đọc sau</p>
+    </div>
+    <button class="btn-clear" id="clearAllBtn" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Xóa tất cả
+    </button>
+  </div>
+</header>
+
+<div class="controls">
+  <input type="text" class="search-input" id="searchInput" placeholder="Tìm trong bookmark của bạn...">
+  <select class="sort-select" id="sortSelect">
+    <option value="recent">Mới lưu nhất</option>
+    <option value="oldest">Cũ nhất</option>
+    <option value="title">Tên A-Z</option>
+  </select>
+</div>
+
+<section class="grid-section">
+  <div class="meta-count">Tổng: <strong id="totalCount">0</strong> truyện đã lưu</div>
+  <div id="content"></div>
+</section>
+
+<!-- Confirm modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmTitle">Xóa bookmark?</h3>
+    <p id="confirmMsg">Bạn có chắc chắn muốn xóa?</p>
+    <div class="modal-buttons">
+      <button class="btn btn-ghost" id="confirmNo">Hủy</button>
+      <button class="btn btn-danger" id="confirmYes">Xóa</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Đã lưu</span>
+</div>
+
+<script>
+let bookmarkedStories = [];  // mảng truyện đã bookmark (đã join với stories và genres)
+let allGenres = [];
+let displayed = [];
+
+function formatViews(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function formatRelativeDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'vừa xong';
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  if (diffHr < 24) return `${diffHr} giờ trước`;
+  if (diffDay < 30) return `${diffDay} ngày trước`;
+  return d.toLocaleDateString('vi-VN');
+}
+
+async function loadData() {
+  // Load genres for display
+  const { data: genresData } = await sb.from('genres').select('*');
+  allGenres = genresData || [];
+
+  // Load bookmarks JOIN với stories
+  const { data, error } = await sb
+    .from('bookmarks')
+    .select('id, created_at, story_id, stories(*)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    toast('Lỗi load bookmark: ' + error.message, 'danger');
+    return;
+  }
+
+  // Flatten: mỗi bookmark có embedded "stories" object (1 truyện)
+  bookmarkedStories = (data || [])
+    .filter(b => b.stories)  // bỏ qua nếu truyện đã bị xóa
+    .map(b => ({
+      ...b.stories,
+      bookmark_id: b.id,
+      bookmarked_at: b.created_at
+    }));
+
+  document.getElementById('clearAllBtn').disabled = bookmarkedStories.length === 0;
+  applyFilterAndRender();
+}
+
+function applyFilterAndRender() {
+  let list = bookmarkedStories;
+
+  // Search
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (q) {
+    list = list.filter(s => s.title.toLowerCase().includes(q));
+  }
+
+  // Sort
+  const sort = document.getElementById('sortSelect').value;
+  if (sort === 'recent') {
+    list = [...list].sort((a, b) => new Date(b.bookmarked_at) - new Date(a.bookmarked_at));
+  } else if (sort === 'oldest') {
+    list = [...list].sort((a, b) => new Date(a.bookmarked_at) - new Date(b.bookmarked_at));
+  } else if (sort === 'title') {
+    list = [...list].sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+  }
+
+  displayed = list;
+  document.getElementById('totalCount').textContent = list.length;
+  renderGrid();
+}
+
+function renderGrid() {
+  const container = document.getElementById('content');
+
+  if (bookmarkedStories.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔖</div>
+        <h3>Chưa có bookmark nào</h3>
+        <p>Bấm vào icon bookmark (góc phải trên ảnh truyện) để lưu truyện bạn muốn đọc sau.</p>
+        <a href="index.html">Khám phá truyện ngay →</a>
+      </div>
+    `;
+    return;
+  }
+
+  if (displayed.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔍</div>
+        <h3>Không tìm thấy</h3>
+        <p>Không có bookmark nào khớp với từ khóa tìm kiếm.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '<div class="grid">' + displayed.map((s, i) => {
+    const genre = allGenres.find(g => g.id === s.genre_id);
+    return `
+      <div class="card" style="animation-delay: ${Math.min(i, 15) * 0.03}s">
+        <a href="${s.drive_link}" target="_blank" rel="noopener" class="card-cover" data-story-id="${s.id}">
+          <img src="${s.cover_url}" alt="${s.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/14141c/5a5a6e?text=No+Cover'">
+          ${s.is_hot ? '<div class="card-badge hot">🔥 HOT</div>' : ''}
+          ${s.is_completed ? '<div class="card-badge done">✓ FULL</div>' : ''}
+          ${s.is_new ? '<div class="card-badge">NEW</div>' : ''}
+          <div class="card-overlay">
+            <span class="btn-watch">▶ Xem ngay</span>
+          </div>
+        </a>
+        <button class="bookmark-btn active" data-story-id="${s.id}" title="Xóa khỏi bookmark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <div class="card-title">${s.title}</div>
+        <div class="card-meta">
+          <span>${genre ? genre.name : 'Khác'}</span>
+          <span class="dot">•</span>
+          <span>👁 ${formatViews(s.view_count)}</span>
+        </div>
+        <div class="bookmark-date">🔖 Lưu ${formatRelativeDate(s.bookmarked_at)}</div>
+      </div>
+    `;
+  }).join('') + '</div>';
+
+  // Bind events
+  container.querySelectorAll('.card-cover[data-story-id]').forEach(link => {
+    link.addEventListener('click', () => {
+      const id = parseInt(link.dataset.storyId);
+      sb.rpc('increment_view_count', { story_id_input: id }).then(() => {});
+      sb.from('story_views').insert({ story_id: id }).then(() => {});
+    });
+  });
+
+  container.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.storyId);
+      await removeBookmark(id);
+    });
+  });
+}
+
+async function removeBookmark(storyId) {
+  const { error } = await sb
+    .from('bookmarks')
+    .delete()
+    .eq('user_id', __session.id)
+    .eq('story_id', storyId);
+  if (error) {
+    toast('Lỗi: ' + error.message, 'danger');
+    return;
+  }
+  bookmarkedStories = bookmarkedStories.filter(s => s.id !== storyId);
+  document.getElementById('clearAllBtn').disabled = bookmarkedStories.length === 0;
+  applyFilterAndRender();
+  toast('Đã bỏ bookmark');
+}
+
+// Clear all bookmarks
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  if (bookmarkedStories.length === 0) return;
+  document.getElementById('confirmTitle').textContent = 'Xóa tất cả bookmark?';
+  document.getElementById('confirmMsg').textContent = `Bạn sẽ mất ${bookmarkedStories.length} truyện đã lưu. Hành động này không thể hoàn tác.`;
+  document.getElementById('confirmModal').classList.add('show');
+});
+
+document.getElementById('confirmNo').addEventListener('click', () => {
+  document.getElementById('confirmModal').classList.remove('show');
+});
+
+document.getElementById('confirmYes').addEventListener('click', async () => {
+  const btn = document.getElementById('confirmYes');
+  btn.disabled = true;
+  const { error } = await sb
+    .from('bookmarks')
+    .delete()
+    .eq('user_id', __session.id);
+  btn.disabled = false;
+  if (error) {
+    toast('Lỗi: ' + error.message, 'danger');
+    return;
+  }
+  bookmarkedStories = [];
+  document.getElementById('clearAllBtn').disabled = true;
+  document.getElementById('confirmModal').classList.remove('show');
+  applyFilterAndRender();
+  toast('Đã xóa tất cả bookmark');
+});
+
+// Click outside modal to close
+document.getElementById('confirmModal').addEventListener('click', (e) => {
+  if (e.target.id === 'confirmModal') {
+    document.getElementById('confirmModal').classList.remove('show');
+  }
+});
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.className = 'toast show' + (type === 'danger' ? ' danger' : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// SEARCH + SORT EVENTS
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilterAndRender, 250);
+});
+document.getElementById('sortSelect').addEventListener('change', applyFilterAndRender);
+
+// THEME
+const themeToggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+let theme = localStorage.getItem('theme') || 'dark';
+function applyTheme(t) {
+  html.setAttribute('data-theme', t);
+  document.getElementById('iconMoon').style.display = t === 'dark' ? 'block' : 'none';
+  document.getElementById('iconSun').style.display = t === 'dark' ? 'none' : 'block';
+  localStorage.setItem('theme', t);
+}
+applyTheme(theme);
+themeToggle.addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  applyTheme(theme);
+});
+
+// LOGOUT
+document.getElementById('logoutLink').addEventListener('click', async (e) => {
+  e.preventDefault();
+  try { await sb.auth.signOut(); } catch (err) {}
+  window.location.href = 'login.html';
+});
+
+// USER INFO
+function renderUserInfo() {
+  if (!__session) {
+    setTimeout(renderUserInfo, 50);
+    return;
+  }
+  document.getElementById('userName').textContent = __session.username || 'User';
+  document.getElementById('userAvatar').textContent = (__session.username || 'U')[0].toUpperCase();
+  if (__session.role === 'admin') {
+    document.getElementById('adminLink').style.display = 'block';
+  }
+}
+renderUserInfo();
+
+// INIT
+loadData();
+</script>
+
+</body>
+</html>
