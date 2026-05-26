@@ -1116,7 +1116,7 @@
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
             <p><strong>Bấm để chọn file</strong> hoặc kéo thả vào đây</p>
-            <p class="form-hint">JPG, PNG, WebP — tỉ lệ 2:3 đẹp nhất</p>
+            <p class="form-hint">Ảnh sẽ được tự nén ~100KB và up lên Supabase Storage</p>
             <input type="file" id="coverFile" accept="image/*">
           </div>
         </div>
@@ -1669,16 +1669,135 @@ coverDrop.addEventListener('drop', (e) => {
   if (e.dataTransfer.files[0]) handleCoverFile(e.dataTransfer.files[0]);
 });
 
-function handleCoverFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById('coverUrl').value = e.target.result;
-    const preview = document.getElementById('coverPreview');
-    preview.style.backgroundImage = `url(${e.target.result})`;
+// Helper: Nén ảnh trước khi up (giảm dung lượng + đồng nhất kích thước)
+async function compressImage(file, maxWidth = 600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxWidth) {
+        h = Math.round(h * maxWidth / w);
+        w = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Compression failed'));
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Cannot load image'));
+    };
+    img.src = url;
+  });
+}
+
+// Helper: Sanitize tên file (bỏ dấu, space)
+function sanitizeFileName(name) {
+  return name
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+async function handleCoverFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    toast('File không phải ảnh', 'danger');
+    return;
+  }
+
+  const drop = document.getElementById('coverDrop');
+  const preview = document.getElementById('coverPreview');
+  const urlInput = document.getElementById('coverUrl');
+
+  // Hiện trạng thái đang xử lý
+  const dropContent = drop.innerHTML;
+  drop.innerHTML = `
+    <div class="file-drop-icon">⏳</div>
+    <p><strong>Đang nén & upload...</strong></p>
+    <p class="form-hint" id="uploadStatus">Đang nén ảnh...</p>
+  `;
+
+  try {
+    // 1. Nén ảnh
+    const compressed = await compressImage(file, 600, 0.8);
+    const sizeKB = (compressed.size / 1024).toFixed(0);
+
+    document.getElementById('uploadStatus').textContent = `Đã nén còn ${sizeKB}KB, đang upload lên Supabase...`;
+
+    // Hiện preview ngay từ blob đã nén (không cần đợi upload)
+    const blobUrl = URL.createObjectURL(compressed);
+    preview.style.backgroundImage = `url(${blobUrl})`;
     preview.classList.add('show');
+
+    // 2. Tạo tên file unique: timestamp + sanitized name
+    const ext = 'jpg';
+    const baseName = sanitizeFileName(file.name.replace(/\.[^.]+$/, '')) || 'cover';
+    const fileName = `${Date.now()}-${baseName}.${ext}`;
+    const path = `stories/${fileName}`;
+
+    // 3. Upload to Supabase Storage
+    const { data, error } = await sb.storage
+      .from('covers')
+      .upload(path, compressed, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    // 4. Get public URL
+    const { data: urlData } = sb.storage.from('covers').getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+
+    // 5. Set URL vào input (để khi Save lấy được)
+    urlInput.value = publicUrl;
+
+    // 6. Khôi phục UI + báo thành công
+    drop.innerHTML = dropContent;
+    toast(`Đã upload ảnh (${sizeKB}KB)`);
+
+    // Re-bind events vì innerHTML reset
+    rebindCoverDropEvents();
+
+  } catch (err) {
+    console.error('Upload error:', err);
+    drop.innerHTML = dropContent;
+    rebindCoverDropEvents();
+    preview.classList.remove('show');
+    urlInput.value = '';
+    toast('Lỗi upload: ' + err.message, 'danger');
+  }
+}
+
+// Bind lại events cho coverDrop sau khi innerHTML bị reset
+function rebindCoverDropEvents() {
+  const drop = document.getElementById('coverDrop');
+  const file = document.getElementById('coverFile');
+  if (!drop || !file) return;
+
+  drop.onclick = () => file.click();
+  file.onchange = (e) => handleCoverFile(e.target.files[0]);
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('dragover'); };
+  drop.ondragleave = () => drop.classList.remove('dragover');
+  drop.ondrop = (e) => {
+    e.preventDefault();
+    drop.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleCoverFile(e.dataTransfer.files[0]);
   };
-  reader.readAsDataURL(file);
 }
 
 // Sync URL → preview
