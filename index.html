@@ -130,10 +130,7 @@
     font-weight: 900;
     font-size: 1.6rem;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--silver) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--accent);
     white-space: nowrap;
     text-decoration: none;
     cursor: pointer;
@@ -236,6 +233,77 @@
   .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
   .search-input::placeholder { color: var(--text-muted); }
   .search-icon { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+
+  /* SEARCH DROPDOWN */
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 100;
+    display: none;
+    max-height: 480px;
+    overflow-y: auto;
+  }
+  .search-dropdown.show { display: block; }
+  .search-result-item {
+    display: flex;
+    gap: 0.85rem;
+    padding: 0.7rem 1rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: background var(--transition);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    cursor: pointer;
+  }
+  .search-result-item:hover { background: var(--bg-elevated); }
+  .search-result-item:last-of-type { border-bottom: none; }
+  .search-result-thumb {
+    width: 40px;
+    height: 56px;
+    flex-shrink: 0;
+    background: var(--bg-elevated) center/cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .search-result-info { flex: 1; min-width: 0; }
+  .search-result-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .search-result-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .search-result-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+  .search-see-all {
+    display: block;
+    text-align: center;
+    padding: 0.85rem;
+    background: var(--bg-elevated);
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border-top: 1px solid var(--border);
+    transition: all var(--transition);
+  }
+  .search-see-all:hover { background: var(--accent); color: white; }
   .icon-btn {
     width: 40px; height: 40px; border-radius: 50%;
     background: var(--bg-card); border: 1px solid var(--border);
@@ -619,7 +687,8 @@
     <div class="nav-right">
       <div class="search-wrap">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" class="search-input" placeholder="Tìm truyện..." minlength="2">
+        <input type="text" class="search-input" id="searchInputDesktop" placeholder="Tìm truyện..." autocomplete="off">
+        <div class="search-dropdown" id="searchDropdownDesktop"></div>
       </div>
 
       <button class="icon-btn" id="themeToggle" aria-label="Đổi giao diện sáng/tối" title="Sáng/Tối">
@@ -649,7 +718,8 @@
 <aside class="mobile-menu" id="mobileMenu">
   <div class="search-wrap" style="width:100%; display:block; margin-bottom: 1rem;">
     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-    <input type="text" class="search-input" placeholder="Tìm truyện..." minlength="2">
+    <input type="text" class="search-input" id="searchInputMobile" placeholder="Tìm truyện..." autocomplete="off">
+    <div class="search-dropdown" id="searchDropdownMobile"></div>
   </div>
   <a href="#top">🏠 Trang Chủ</a>
   <div class="mobile-menu-section">Thể loại</div>
@@ -1278,32 +1348,91 @@ backToTop.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-let searchTimer;
-document.querySelectorAll('.search-input').forEach(input => {
-  input.addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      if (q.length >= 2) {
-        // Search: filter tất cả section
-        const filterFn = list => list.filter(s => s.t.toLowerCase().includes(q));
-        renderCards('grid-new', filterFn(dataNew));
-        renderCards('grid-hot', filterFn(dataHot));
-        renderCards('grid-done', filterFn(dataDone));
-        // Trong carousel cũng filter
-        const oldTop = dataTop;
-        const tempTop = filterFn(dataTop);
-        // Tạm thời thay dataTop để renderCarousel dùng
-        dataTop = tempTop;
-        renderCarousel();
-        dataTop = oldTop;
-      } else if (q.length === 0) {
-        // Reset filter
-        renderAll();
-      }
-    }, 300);
+// ===== SEARCH DROPDOWN =====
+function setupSearchDropdown(inputId, dropdownId) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 1) {
+      dropdown.classList.remove('show');
+      return;
+    }
+    timer = setTimeout(() => renderSearchDropdown(q, dropdown), 200);
   });
-});
+
+  // Click ra ngoài → đóng dropdown
+  document.addEventListener('click', (e) => {
+    if (!input.parentElement.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
+  });
+
+  // Focus lại input → mở dropdown nếu có nội dung
+  input.addEventListener('focus', () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length >= 1) renderSearchDropdown(q, dropdown);
+  });
+
+  // Enter → đi tới trang category với keyword
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const q = input.value.trim();
+      if (q) {
+        window.location.href = `category.html?q=${encodeURIComponent(q)}`;
+      }
+    }
+  });
+}
+
+function renderSearchDropdown(q, dropdown) {
+  // Filter tất cả truyện theo từ khóa (substring matching không phân biệt hoa thường, có hỗ trợ unidecode tiếng Việt cơ bản)
+  const matched = allStories.filter(s =>
+    s.t.toLowerCase().includes(q)
+  );
+
+  if (matched.length === 0) {
+    dropdown.innerHTML = `<div class="search-result-empty">Không tìm thấy truyện nào</div>`;
+    dropdown.classList.add('show');
+    return;
+  }
+
+  // Lấy tối đa 5 truyện đầu
+  const top5 = matched.slice(0, 5);
+  let html = top5.map(s => `
+    <a href="${s.link}" target="_blank" rel="noopener" class="search-result-item" data-story-id="${s.id}">
+      <div class="search-result-thumb" style="background-image: url('${s.cover}')"></div>
+      <div class="search-result-info">
+        <div class="search-result-title">${s.t}</div>
+        <div class="search-result-meta">${s.g} • 👁 ${s.v}</div>
+      </div>
+    </a>
+  `).join('');
+
+  html += `<a href="category.html?q=${encodeURIComponent(q)}" class="search-see-all">
+    Xem tất cả kết quả cho "${q}" →
+  </a>`;
+
+  dropdown.innerHTML = html;
+  dropdown.classList.add('show');
+
+  // Bind track view khi click item
+  dropdown.querySelectorAll('.search-result-item[data-story-id]').forEach(link => {
+    link.addEventListener('click', () => {
+      const id = parseInt(link.dataset.storyId);
+      sb.rpc('increment_view_count', { story_id_input: id }).then(() => {});
+      sb.from('story_views').insert({ story_id: id }).then(() => {});
+    });
+  });
+}
+
+// Init dropdown cho cả desktop + mobile search
+setupSearchDropdown('searchInputDesktop', 'searchDropdownDesktop');
+setupSearchDropdown('searchInputMobile', 'searchDropdownMobile');
 
 document.querySelectorAll('.tabs').forEach(tabGroup => {
   tabGroup.querySelectorAll('.tab').forEach(tab => {

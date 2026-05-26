@@ -96,10 +96,7 @@
     font-weight: 900; font-size: 1.5rem;
     letter-spacing: -0.02em; cursor: pointer;
     text-decoration: none; color: var(--text-primary);
-    background: linear-gradient(135deg, var(--accent), var(--silver));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--accent);
   }
   .logo i {  }
 
@@ -678,10 +675,14 @@ let currentGenreSlug = null;
 let currentPage = 1;
 const PAGE_SIZE = 25;
 
-// Get genre from URL ?genre=slug
+// Get genre & search query from URL ?genre=slug&q=keyword
 function getGenreFromURL() {
   const params = new URLSearchParams(window.location.search);
   return params.get('genre');
+}
+function getSearchFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('q') || '';
 }
 
 // Format view count
@@ -718,6 +719,12 @@ async function loadData() {
 
   // Determine current genre from URL
   currentGenreSlug = getGenreFromURL();
+
+  // Pre-fill search input từ URL ?q=
+  const initialQ = getSearchFromURL();
+  if (initialQ) {
+    document.getElementById('searchInput').value = initialQ;
+  }
 
   renderGenreTabs();
   updatePageHeader();
