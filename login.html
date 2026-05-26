@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Đăng Nhập — Cổng Light Novel</title>
+<title>Đăng Nhập — Trạm Đọc</title>
 <!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -45,7 +45,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root[data-theme="dark"] {
     --bg-deep: #0a0e1a;
@@ -86,8 +86,8 @@
     --shadow-card: 0 20px 60px rgba(10, 20, 40, 0.12);
   }
   :root {
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-body: 'Inter Tight', system-ui, sans-serif;
+    --font-display: 'Lora', Georgia, serif;
+    --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -123,7 +123,7 @@
     opacity: 0.08;
     z-index: 1;
     font-family: var(--font-display);
-    font-style: italic;
+    
     font-weight: 900;
     color: var(--accent);
     user-select: none;
@@ -176,11 +176,11 @@
     line-height: 1;
     margin-bottom: 0.5rem;
   }
-  .logo i { font-style: italic; }
+  .logo i {  }
 
   .tagline {
     font-family: var(--font-display);
-    font-style: italic;
+    
     color: var(--text-muted);
     font-size: 1rem;
   }
@@ -512,7 +512,7 @@
 <!-- Login container -->
 <main class="login-wrap">
   <div class="brand">
-    <div class="logo">Cổng<i>Light</i>Novel</div>
+    <div class="logo">Trạm Đọc</div>
     <div class="tagline">— mở một chương truyện —</div>
   </div>
 
@@ -592,7 +592,7 @@
     </div>
   </div>
 
-  <div class="copyright">© 2016 — 2026 Cổng Light Novel</div>
+  <div class="copyright">© 2016 — 2026 Trạm Đọc</div>
 </main>
 
 <script>

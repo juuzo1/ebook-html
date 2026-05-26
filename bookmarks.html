@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bookmark của tôi — Cổng Light Novel</title>
+<title>Bookmark của tôi — Trạm Đọc</title>
 <style>html { visibility: hidden; }</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -36,7 +36,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-deep: #0a0e1a;
@@ -56,8 +56,8 @@
     --danger: #e94560;
     --success: #4ecdc4;
     --hot: #ff6b6b;
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-body: 'Inter Tight', system-ui, sans-serif;
+    --font-display: 'Lora', Georgia, serif;
+    --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
     --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   [data-theme="light"] {
@@ -100,7 +100,7 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  .logo i { font-style: italic; }
+  .logo i {  }
   .nav-links { display: flex; gap: 0.5rem; list-style: none; }
   .nav-links a {
     color: var(--text-secondary); text-decoration: none;
@@ -422,7 +422,7 @@
     padding: 0 0.85rem 0.85rem;
     font-size: 0.72rem;
     color: var(--gold);
-    font-style: italic;
+    
   }
 
   /* EMPTY STATE */
@@ -518,6 +518,49 @@
   }
   .btn-danger:hover { opacity: 0.85; }
 
+  /* FOOTER */
+  footer {
+    margin-top: 4rem;
+    padding: 3rem 1.5rem 2rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+  .footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    text-align: center;
+  }
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .footer-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    font-size: 0.88rem;
+    transition: all var(--transition);
+  }
+  .footer-links a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .footer-copyright {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
   /* TOAST */
   .toast {
     position: fixed;
@@ -587,7 +630,7 @@
 
 <nav class="navbar">
   <div class="navbar-inner">
-    <a class="logo" href="index.html">Cổng<i>Light</i>Novel</a>
+    <a class="logo" href="index.html">Trạm Đọc</a>
     <ul class="nav-links">
       <li><a href="index.html">Trang Chủ</a></li>
       <li><a href="category.html">Thể Loại</a></li>
@@ -645,6 +688,22 @@
   <div class="meta-count">Tổng: <strong id="totalCount">0</strong> truyện đã lưu</div>
   <div id="content"></div>
 </section>
+
+<footer>
+  <div class="footer-content">
+    <div class="footer-links">
+      <a href="#" target="_blank" id="footerTelegram">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        Telegram
+      </a>
+      <a href="#" target="_blank" id="footerFacebook">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Facebook
+      </a>
+    </div>
+    <div class="footer-copyright" id="footerCopyright">© 2016 — 2026 Trạm Đọc</div>
+  </div>
+</footer>
 
 <!-- Confirm modal -->
 <div class="modal-backdrop" id="confirmModal">
@@ -972,6 +1031,22 @@ renderUserInfo();
 
 // INIT
 loadData();
+loadFooterSettings();
+
+async function loadFooterSettings() {
+  const { data } = await sb.from('site_settings').select('*');
+  if (!data) return;
+  const s = {};
+  data.forEach(r => { s[r.key] = r.value; });
+  if (s.contact_telegram) document.getElementById('footerTelegram').href = s.contact_telegram;
+  if (s.contact_facebook) document.getElementById('footerFacebook').href = s.contact_facebook;
+  if (s.copyright) document.getElementById('footerCopyright').textContent = s.copyright;
+  if (s.site_name) {
+    document.querySelectorAll('.logo').forEach(el => {
+      el.textContent = s.site_name;
+    });
+  }
+}
 </script>
 
 </body>
