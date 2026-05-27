@@ -899,63 +899,40 @@ function mapStory(row) {
   };
 }
 
-// Load all data from Supabase
+// Load all data from Supabase - PARALLEL để tối ưu tốc độ
 async function loadAllStories() {
-  // Load genres
-  const { data: genresData } = await sb
-    .from('genres')
-    .select('*')
-    .order('display_order', { ascending: true });
-  allGenres = genresData || [];
+  // 3 query song song - giảm thời gian đáng kể
+  const [genresRes, storiesRes, bookmarksRes] = await Promise.all([
+    sb.from('genres').select('*').order('display_order', { ascending: true }),
+    sb.from('stories').select('*').order('created_at', { ascending: false }),
+    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] })
+  ]);
 
-  // Load all stories
-  const { data: storiesData, error } = await sb
-    .from('stories')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error('Load stories error:', error);
+  allGenres = genresRes.data || [];
+
+  if (storiesRes.error) {
+    console.error('Load stories error:', storiesRes.error);
     return;
   }
-  allStories = (storiesData || []).map(mapStory);
+  const storiesData = storiesRes.data || [];
+  allStories = storiesData.map(mapStory);
 
-  // Phân loại vào từng section
-  // Top tháng: thử dùng view top_stories_monthly, nếu không có thì fallback theo view_count
-  try {
-    const { data: topMonthly } = await sb
-      .from('top_stories_monthly')
-      .select('*')
-      .limit(18);
-    if (topMonthly && topMonthly.length > 0) {
-      // Join với info đầy đủ từ stories
-      dataTop = topMonthly.map(row => {
-        const full = storiesData.find(s => s.id === row.id);
-        return full ? mapStory(full) : null;
-      }).filter(Boolean);
-    } else {
-      // Fallback: top theo view_count
-      dataTop = [...allStories].sort((a, b) => {
-        const aRow = storiesData.find(s => s.id === a.id);
-        const bRow = storiesData.find(s => s.id === b.id);
-        return (bRow?.view_count || 0) - (aRow?.view_count || 0);
-      }).slice(0, 18);
-    }
-  } catch (e) {
-    dataTop = allStories.slice(0, 18);
-  }
+  // Top theo view_count (tính trên client, không cần query thêm)
+  dataTop = [...allStories].sort((a, b) => {
+    const aRow = storiesData.find(s => s.id === a.id);
+    const bRow = storiesData.find(s => s.id === b.id);
+    return (bRow?.view_count || 0) - (aRow?.view_count || 0);
+  }).slice(0, 18);
 
-  // Các section khác: lấy hết, pagination sẽ chia trang
+  // Các section khác
   dataNew = allStories.filter(s => s.isNew);
   dataHot = allStories.filter(s => s.hot);
   dataDone = allStories.filter(s => s.done);
 
-  // Load user bookmarks trước khi render (để hiện đúng trạng thái icon bookmark)
-  await loadUserBookmarks();
+  // Bookmarks
+  userBookmarks = new Set((bookmarksRes.data || []).map(b => b.story_id));
 
-  // Cập nhật menu Thể Loại trong navbar
   updateGenreMenus();
-
-  // Render all
   renderAll();
 }
 
