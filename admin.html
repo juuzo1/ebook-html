@@ -2260,8 +2260,8 @@ function updateCounts() {
   document.getElementById('count-stories').textContent = stories.length;
   document.getElementById('count-genres').textContent = genres.length;
   document.getElementById('count-users').textContent = users.length;
-  // Tổng lượt xem từ tất cả truyện
-  const totalViews = stories.reduce((sum, s) => sum + (s.view_count || 0), 0);
+  // Tổng lượt xem từ tất cả truyện (field đã được map từ view_count → views)
+  const totalViews = stories.reduce((sum, s) => sum + (s.views || 0), 0);
   document.getElementById('totalViews').textContent = totalViews.toLocaleString('vi-VN');
 }
 
