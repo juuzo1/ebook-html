@@ -130,7 +130,10 @@
     font-weight: 900;
     font-size: 1.6rem;
     letter-spacing: -0.02em;
-    color: var(--accent);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--silver) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     white-space: nowrap;
     text-decoration: none;
     cursor: pointer;
@@ -409,10 +412,14 @@
   .hero-title {
     font-family: var(--font-display);
     font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 900; line-height: 1.05;
+    font-weight: 900; line-height: 1.15;
     letter-spacing: -0.02em; margin-bottom: 1rem; max-width: 700px;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 60%, var(--silver) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  .hero-title em {  color: var(--accent); font-weight: 500; }
+  .hero-title em { color: var(--accent); font-weight: 500; -webkit-text-fill-color: var(--accent); }
   .hero-sub { color: var(--text-secondary); font-size: 1.05rem; max-width: 540px; }
   .section { max-width: 1400px; margin: 0 auto 4rem; padding: 0 2rem; }
   .section-head {
@@ -1274,14 +1281,18 @@ async function loadFooterSettings() {
   if (settings.copyright) {
     document.getElementById('footerCopyright').textContent = settings.copyright;
   }
-  if (settings.site_name) {
-    // Cập nhật logo nếu admin đổi tên
-    document.querySelectorAll('.logo').forEach(el => {
-      if (el.textContent.includes('Trạm Đọc') || el.textContent.includes('Cổng')) {
-        el.textContent = settings.site_name;
-      }
-    });
-  }
+  // Update logo navbar
+  document.querySelectorAll('.logo').forEach(el => {
+    if (settings.logo_url) {
+      // Có ảnh logo → thay text bằng ảnh
+      el.innerHTML = `<img src="${settings.logo_url}" alt="Logo" style="height: 38px; display: block; max-width: 180px; object-fit: contain;">`;
+      el.style.background = 'none';
+      el.style.webkitTextFillColor = 'initial';
+    } else if (settings.site_name) {
+      // Không có ảnh → dùng text từ DB
+      el.textContent = settings.site_name;
+    }
+  });
 }
 
 // Re-render carousel when viewport changes (cards per slide may change)

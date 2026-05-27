@@ -123,7 +123,10 @@
     font-weight: 900;
     font-size: 1.5rem;
     letter-spacing: -0.02em;
-    color: var(--accent);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--silver) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     padding: 0 0.5rem 0.5rem;
     margin-bottom: 0.25rem;
     text-decoration: none;
@@ -1023,7 +1026,7 @@
               <input type="file" id="logoFile" accept="image/*" class="form-input" style="padding: 0.5rem">
               <p class="form-hint">PNG/SVG nền trong suốt, tỉ lệ vuông sẽ đẹp nhất</p>
             </div>
-            <button class="btn btn-primary" onclick="saveLogo()">Lưu logo</button>
+            <button class="btn btn-secondary" onclick="removeLogo()">🗑️ Xóa logo</button>
           </div>
 
           <div class="settings-card">
@@ -2095,21 +2098,20 @@ function confirmDeleteUser(id) {
 }
 
 // ==================== SETTINGS ====================
-async function saveLogo() {
-  // Lấy URL từ background image của preview
-  const preview = document.getElementById('logoPreview');
-  const bg = preview.style.backgroundImage;
-  const urlMatch = bg.match(/url\(["']?(.+?)["']?\)/);
-  if (!urlMatch) { toast('Chưa chọn logo', 'danger'); return; }
-  const logoUrl = urlMatch[1];
-
+async function removeLogo() {
+  if (!confirm('Xóa logo khỏi website?')) return;
   const { error } = await sb.from('site_settings').upsert({
     key: 'logo_url',
-    value: logoUrl,
+    value: '',
     updated_at: new Date().toISOString()
   });
   if (error) { toast('Lỗi: ' + error.message, 'danger'); return; }
-  toast('Đã lưu logo');
+  const preview = document.getElementById('logoPreview');
+  preview.style.backgroundImage = '';
+  preview.innerHTML = 'Chưa có logo';
+  preview.dataset.url = '';
+  document.getElementById('logoFile').value = '';
+  toast('Đã xóa logo');
 }
 
 async function saveContact() {
@@ -2138,17 +2140,57 @@ async function saveSite() {
   toast('Đã lưu thông tin website');
 }
 
-// Logo file preview
-document.getElementById('logoFile').addEventListener('change', (e) => {
+// Logo file: tự nén + upload lên Supabase Storage
+document.getElementById('logoFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const preview = document.getElementById('logoPreview');
-    preview.style.backgroundImage = `url(${ev.target.result})`;
-    preview.textContent = '';
-  };
-  reader.readAsDataURL(file);
+  if (!file || !file.type.startsWith('image/')) {
+    toast('File không phải ảnh', 'danger');
+    return;
+  }
+
+  const preview = document.getElementById('logoPreview');
+  const originalContent = preview.innerHTML;
+  preview.innerHTML = '⏳ Đang upload...';
+  preview.style.backgroundImage = '';
+
+  try {
+    // Nén logo: max 400px, JPEG 85%
+    const compressed = await compressImage(file, 400, 0.85);
+
+    // Up lên Supabase Storage
+    const fileName = `logo-${Date.now()}.jpg`;
+    const path = `site/${fileName}`;
+    const { error } = await sb.storage
+      .from('covers')
+      .upload(path, compressed, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+    if (error) throw error;
+
+    // Get public URL
+    const { data: urlData } = sb.storage.from('covers').getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+
+    // LƯU NGAY vào site_settings (không cần bấm "Lưu logo" nữa)
+    const { error: saveErr } = await sb.from('site_settings').upsert({
+      key: 'logo_url',
+      value: publicUrl,
+      updated_at: new Date().toISOString()
+    });
+    if (saveErr) throw saveErr;
+
+    // Cập nhật preview
+    preview.style.backgroundImage = `url(${publicUrl})`;
+    preview.innerHTML = '';
+    preview.dataset.url = publicUrl;
+    toast(`Đã upload logo (${(compressed.size / 1024).toFixed(0)} KB)`);
+  } catch (err) {
+    console.error(err);
+    preview.innerHTML = originalContent;
+    toast('Lỗi upload logo: ' + err.message, 'danger');
+  }
 });
 
 // ==================== COUNTS ====================
