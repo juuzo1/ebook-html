@@ -1685,13 +1685,11 @@ document.querySelectorAll('#storyModal .upload-tab').forEach(tab => {
   });
 });
 
-// Checkbox chip toggle
-document.querySelectorAll('.checkbox-chip').forEach(c => {
-  c.addEventListener('click', (e) => {
-    if (e.target.tagName === 'INPUT') return;
-    const input = c.querySelector('input');
-    input.checked = !input.checked;
-    c.classList.toggle('checked', input.checked);
+// Checkbox chip - sync visual class theo state input
+// (label đã tự toggle input, chỉ cần lắng nghe change event)
+document.querySelectorAll('.checkbox-chip input').forEach(input => {
+  input.addEventListener('change', () => {
+    input.closest('.checkbox-chip').classList.toggle('checked', input.checked);
   });
 });
 
