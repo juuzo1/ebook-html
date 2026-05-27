@@ -1161,9 +1161,9 @@
       <div class="form-row">
         <label class="form-label">Trạng thái / Hiển thị tại</label>
         <div class="checkbox-group">
-          <label class="checkbox-chip"><input type="checkbox" value="hot"> 🔥 Truyện Hot</label>
-          <label class="checkbox-chip"><input type="checkbox" value="new"> ✦ Mới Update</label>
-          <label class="checkbox-chip"><input type="checkbox" value="done"> ✓ Đã hoàn thành</label>
+          <div class="checkbox-chip" data-value="hot"><input type="checkbox" value="hot"> 🔥 Truyện Hot</div>
+          <div class="checkbox-chip" data-value="new"><input type="checkbox" value="new"> ✦ Mới Update</div>
+          <div class="checkbox-chip" data-value="done"><input type="checkbox" value="done"> ✓ Đã hoàn thành</div>
         </div>
       </div>
     </div>
@@ -1584,7 +1584,11 @@ async function saveStory() {
   if (!cover) { toast('Vui lòng thêm ảnh bìa', 'danger'); return; }
 
   const tags = [];
-  document.querySelectorAll('#storyModal .checkbox-chip input:checked').forEach(c => tags.push(c.value));
+  document.querySelectorAll('#storyModal .checkbox-chip input').forEach(c => {
+    if (c.checked) tags.push(c.value);
+  });
+  console.log('[Admin] Saving tags:', tags);
+  console.log('[Admin] is_hot:', tags.includes('hot'), 'is_new:', tags.includes('new'), 'is_completed:', tags.includes('done'));
 
   // Map UI fields → DB fields
   const dbData = {
@@ -1598,6 +1602,7 @@ async function saveStory() {
     is_new: tags.includes('new'),
     is_completed: tags.includes('done')
   };
+  console.log('[Admin] dbData:', dbData);
 
   // Disable button to prevent double click
   const btnSave = document.querySelector('#storyModal .modal-footer .btn-primary');
@@ -1685,11 +1690,12 @@ document.querySelectorAll('#storyModal .upload-tab').forEach(tab => {
   });
 });
 
-// Checkbox chip - sync visual class theo state input
-// (label đã tự toggle input, chỉ cần lắng nghe change event)
-document.querySelectorAll('.checkbox-chip input').forEach(input => {
-  input.addEventListener('change', () => {
-    input.closest('.checkbox-chip').classList.toggle('checked', input.checked);
+// Checkbox chip - click toggle (div, không phải label)
+document.querySelectorAll('#storyModal .checkbox-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const input = chip.querySelector('input');
+    input.checked = !input.checked;
+    chip.classList.toggle('checked', input.checked);
   });
 });
 
