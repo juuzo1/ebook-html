@@ -45,6 +45,7 @@
       const userData = await sb.auth.getUser();
       if (userData.data && userData.data.user) {
         __session = {
+          id: userData.data.user.id,
           username: userData.data.user.user_metadata?.username || userData.data.user.email.split('@')[0],
           email: userData.data.user.email,
           role: userData.data.user.user_metadata?.role || 'user'
@@ -270,6 +271,10 @@
     overflow-y: auto;
   }
   .search-dropdown.show { display: block; }
+  @media (max-width: 640px) {
+    .search-dropdown { max-height: 60vh; }
+    .search-result-thumb { width: 50px; height: 70px; }
+  }
   .search-result-item {
     display: flex;
     gap: 0.85rem;
@@ -670,12 +675,20 @@
     .nav-container { padding: 1rem; }
     .hero { margin: 2rem auto; padding: 0 1rem; }
     .section { padding: 0 1rem; margin-bottom: 3rem; }
-    .grid, .carousel-slide { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .grid, .carousel-slide { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
     .section-head { gap: 0.5rem; }
     .section-title { font-size: 1.3rem; }
     .tabs { margin-left: 0; width: 100%; }
-    .card-title { font-size: 0.8rem; }
+    .card-title { font-size: 0.75rem; }
+    .card-meta { font-size: 0.7rem; }
+    .card-badge { font-size: 0.6rem; padding: 0.15rem 0.4rem; }
+    .card-bookmark { width: 28px; height: 28px; opacity: 1; }
+    .card-bookmark svg { width: 14px; height: 14px; }
+    .card-overlay { display: none; }
     .back-to-top { bottom: 1rem; right: 1rem; }
+  }
+  @media (max-width: 380px) {
+    .grid, .carousel-slide { grid-template-columns: repeat(2, 1fr); }
   }
   /* removed for perf */
   .card { contain: layout style paint; }
