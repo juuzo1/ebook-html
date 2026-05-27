@@ -116,16 +116,20 @@
     inset: 0;
     pointer-events: none;
     z-index: 1;
-    opacity: var(--noise-opacity);
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    display: none;
   }
   .navbar {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: color-mix(in srgb, var(--bg-deep) 85%, transparent);
-    backdrop-filter: blur(20px);
+    background: rgba(10, 14, 26, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
+    contain: layout style;
+  }
+  :root[data-theme="light"] .navbar {
+    background: rgba(244, 246, 251, 0.92);
   }
   .nav-container {
     max-width: 1400px;
@@ -208,7 +212,7 @@
     min-width: 200px;
     opacity: 0;
     pointer-events: none;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     box-shadow: var(--shadow-card);
     z-index: 120;
   }
@@ -224,7 +228,7 @@
     text-decoration: none;
     font-size: 0.9rem;
     border-radius: 8px;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .dropdown-menu a:hover { background: var(--bg-elevated); color: var(--accent); }
   .dropdown-arrow { width: 12px; height: 12px; transition: transform var(--transition); }
@@ -241,7 +245,7 @@
     border-radius: 50px;
     font-family: var(--font-body);
     font-size: 0.9rem;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
   .search-input::placeholder { color: var(--text-muted); }
@@ -314,14 +318,14 @@
     font-weight: 600;
     font-size: 0.88rem;
     border-top: 1px solid var(--border);
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .search-see-all:hover { background: var(--accent); color: white; }
   .icon-btn {
     width: 40px; height: 40px; border-radius: 50%;
     background: var(--bg-card); border: 1px solid var(--border);
     display: grid; place-items: center; cursor: pointer;
-    color: var(--text-secondary); transition: all var(--transition);
+    color: var(--text-secondary); transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
   .user-pill {
@@ -329,7 +333,7 @@
     background: var(--bg-card); border: 1px solid var(--border);
     padding: 0.35rem 0.9rem 0.35rem 0.4rem; border-radius: 50px;
     font-size: 0.85rem; color: var(--text-secondary);
-    cursor: pointer; transition: all var(--transition);
+    cursor: pointer; transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     position: relative;
   }
   .user-pill:hover { border-color: var(--accent); }
@@ -361,7 +365,7 @@
     opacity: 0;
     pointer-events: none;
     transform: translateY(-8px);
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     box-shadow: var(--shadow-card);
     z-index: 120;
   }
@@ -378,7 +382,7 @@
     text-decoration: none;
     font-size: 0.875rem;
     border-radius: 8px;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .user-dropdown a:hover { background: var(--bg-elevated); color: var(--accent); }
   .user-dropdown a#logoutLink { color: var(--danger); }
@@ -389,9 +393,9 @@
     display: none; width: 40px; height: 40px; border-radius: 8px;
     background: var(--bg-card); border: 1px solid var(--border);
     flex-direction: column; justify-content: center; align-items: center;
-    gap: 5px; cursor: pointer; transition: all var(--transition);
+    gap: 5px; cursor: pointer; transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
-  .hamburger span { width: 20px; height: 2px; background: var(--text-primary); border-radius: 2px; transition: all var(--transition); }
+  .hamburger span { width: 20px; height: 2px; background: var(--text-primary); border-radius: 2px; transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition); }
   .hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   .hamburger.active span:nth-child(2) { opacity: 0; }
   .hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
@@ -455,7 +459,7 @@
     background: transparent; border: 1px solid var(--border);
     color: var(--text-secondary); padding: 0.35rem 0.9rem; border-radius: 50px;
     font-family: var(--font-body); font-size: 0.8rem; cursor: pointer;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
   .tab:not(.active):hover { color: var(--text-primary); border-color: var(--text-muted); }
@@ -482,7 +486,7 @@
     font-family: var(--font-body);
     font-weight: 500;
     font-size: 0.9rem;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -561,7 +565,7 @@
     cursor: pointer;
     display: grid;
     place-items: center;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     z-index: 3;
     opacity: 0;
   }
@@ -589,7 +593,7 @@
     background: transparent; border: 1px solid var(--border);
     color: var(--text-secondary); padding: 0.75rem 2rem; border-radius: 50px;
     font-family: var(--font-body); font-size: 0.9rem; cursor: pointer;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .btn-more:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -625,7 +629,7 @@
     background: var(--border);
     border: none;
     cursor: pointer;
-    transition: all var(--transition);
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
     padding: 0;
   }
   .carousel-dot.active {
@@ -646,7 +650,7 @@
     display: grid; place-items: center; cursor: pointer;
     box-shadow: 0 8px 24px var(--accent-glow);
     opacity: 0; pointer-events: none; transform: translateY(20px);
-    transition: all var(--transition); z-index: 90;
+    transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition); z-index: 90;
   }
   .back-to-top.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
   .back-to-top:hover { background: var(--accent-hover); transform: translateY(-2px); }
@@ -1135,7 +1139,7 @@ function cardHTML(item, i) {
   return `
     <div class="card">
       <a href="${item.link}" target="_blank" rel="noopener" class="card-cover" data-story-id="${item.id}" data-title="${item.t}">
-        <img src="${item.cover}" alt="${item.t}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/14141c/5a5a6e?text=No+Cover'">
+        <img src="${item.cover}" alt="${item.t}" loading="lazy" decoding="async" width="300" height="450" onerror="this.src='https://via.placeholder.com/300x450/14141c/5a5a6e?text=No+Cover'">
         ${item.hot ? `<div class="card-badge hot">🔥 HOT</div>` : ''}
         ${item.done ? `<div class="card-badge done">✓ FULL</div>` : ''}
         ${item.isNew ? `<div class="card-badge">NEW</div>` : ''}
@@ -1362,10 +1366,19 @@ mobileMenu.querySelectorAll('a').forEach(a => {
 });
 
 const backToTop = document.getElementById('backToTop');
+let scrollTicking = false;
+let lastScrollY = 0;
 window.addEventListener('scroll', () => {
-  if (window.scrollY > 400) backToTop.classList.add('show');
-  else backToTop.classList.remove('show');
-});
+  lastScrollY = window.scrollY;
+  if (!scrollTicking) {
+    requestAnimationFrame(() => {
+      if (lastScrollY > 400) backToTop.classList.add('show');
+      else backToTop.classList.remove('show');
+      scrollTicking = false;
+    });
+    scrollTicking = true;
+  }
+}, { passive: true });
 backToTop.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
