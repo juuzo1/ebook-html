@@ -14,7 +14,6 @@
   } catch (e) {}
 </script>
 <title>Bookmark — Trạm Đọc</title>
-<style>html { visibility: hidden; }</style>
 <!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -27,6 +26,7 @@
 
   // ===== AUTH GUARD =====
   // Chặn truy cập nếu chưa đăng nhập Supabase
+  // Dùng session.user trực tiếp (đọc localStorage, KHÔNG tốn network như getUser())
   window.__authReady = (async function() {
     try {
       const { data } = await sb.auth.getSession();
@@ -34,17 +34,13 @@
         window.location.replace('login.html');
         return false;
       }
-      const userData = await sb.auth.getUser();
-      if (userData.data && userData.data.user) {
-        __session = {
-          id: userData.data.user.id,
-          username: userData.data.user.user_metadata?.username || userData.data.user.email.split('@')[0],
-          email: userData.data.user.email,
-          role: userData.data.user.user_metadata?.role || 'user'
-        };
-      }
-      // Đã xác thực OK → hiện trang
-      document.documentElement.style.visibility = 'visible';
+      const u = data.session.user;
+      __session = {
+        id: u.id,
+        username: u.user_metadata?.username || u.email.split('@')[0],
+        email: u.email,
+        role: u.user_metadata?.role || 'user'
+      };
       return true;
     } catch (e) {
       window.location.replace('login.html');

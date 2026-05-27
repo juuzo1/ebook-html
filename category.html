@@ -14,7 +14,6 @@
   } catch (e) {}
 </script>
 <title>Thể Loại — Trạm Đọc</title>
-<style>html { visibility: hidden; }</style>
 <!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -28,6 +27,7 @@
   // ===== AUTH GUARD =====
   // Chặn truy cập nếu chưa đăng nhập Supabase
   // Đồng thời expose Promise __authReady để code khác có thể await
+  // Dùng session.user trực tiếp (đọc localStorage, KHÔNG tốn network như getUser())
   window.__authReady = (async function() {
     try {
       const { data } = await sb.auth.getSession();
@@ -35,17 +35,13 @@
         window.location.replace('login.html');
         return false;
       }
-      const userData = await sb.auth.getUser();
-      if (userData.data && userData.data.user) {
-        __session = {
-          id: userData.data.user.id,
-          username: userData.data.user.user_metadata?.username || userData.data.user.email.split('@')[0],
-          email: userData.data.user.email,
-          role: userData.data.user.user_metadata?.role || 'user'
-        };
-      }
-      // Đã xác thực OK → hiện trang
-      document.documentElement.style.visibility = 'visible';
+      const u = data.session.user;
+      __session = {
+        id: u.id,
+        username: u.user_metadata?.username || u.email.split('@')[0],
+        email: u.email,
+        role: u.user_metadata?.role || 'user'
+      };
       return true;
     } catch (e) {
       window.location.replace('login.html');
@@ -980,22 +976,14 @@ function formatViews(n) {
 }
 
 // ============= LOAD DATA =============
-async function loadData() {
-  // 3 query song song
-  const [genresRes, storiesRes, bookmarksRes] = await Promise.all([
-    sb.from('genres').select('*').order('display_order', { ascending: true }),
-    sb.from('stories').select('*').order('created_at', { ascending: false }),
-    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] })
-  ]);
+const CACHE_KEY = 'tramdoc_data_v1';
 
-  allGenres = genresRes.data || [];
-  allStories = storiesRes.data || [];
-  userBookmarks = new Set((bookmarksRes.data || []).map(b => b.story_id));
+function processData(genresData, storiesData, bookmarksData) {
+  allGenres = genresData || [];
+  allStories = storiesData || [];
+  userBookmarks = new Set((bookmarksData || []).map(b => b.story_id));
 
-  // Determine current genre from URL
   currentGenreSlug = getGenreFromURL();
-
-  // Pre-fill search input từ URL ?q=
   const initialQ = getSearchFromURL();
   if (initialQ) {
     const searchInput = document.getElementById('searchInput');
@@ -1006,6 +994,38 @@ async function loadData() {
   renderGenreDropdowns();
   updatePageHeader();
   applyFilterAndRender();
+}
+
+async function loadData() {
+  // 1. Đọc cache → render ngay
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { genres, stories, bookmarks, ts } = JSON.parse(cached);
+      if (Date.now() - ts < 5 * 60 * 1000) {
+        processData(genres, stories, bookmarks || []);
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fetch fresh data
+  const [genresRes, storiesRes, bookmarksRes] = await Promise.all([
+    sb.from('genres').select('*').order('display_order', { ascending: true }),
+    sb.from('stories').select('*').order('created_at', { ascending: false }),
+    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] })
+  ]);
+
+  const genresData = genresRes.data || [];
+  const storiesData = storiesRes.data || [];
+  const bookmarksData = bookmarksRes.data || [];
+
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      genres: genresData, stories: storiesData, bookmarks: bookmarksData, ts: Date.now()
+    }));
+  } catch (e) {}
+
+  processData(genresData, storiesData, bookmarksData);
 }
 
 // ============= GENRE TABS =============
