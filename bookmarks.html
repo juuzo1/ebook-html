@@ -517,8 +517,8 @@
     text-decoration: none;
     cursor: pointer;
   }
-  .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--transition); }
-  .card:hover .card-cover img { transform: scale(1.08); }
+  .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease-out; }
+  .card:hover .card-cover img { transform: scale(1.04); }
   .card-overlay {
     position: absolute; inset: 0;
     background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%);
@@ -537,7 +537,7 @@
   .btn-watch:hover { background: var(--accent-hover); }
   .card-badge {
     position: absolute; top: 0.5rem; left: 0.5rem;
-    background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.85);
     color: white; padding: 0.2rem 0.55rem; border-radius: 50px;
     font-size: 0.7rem; font-weight: 600;
     display: flex; align-items: center; gap: 0.3rem;
@@ -552,7 +552,6 @@
     width: 32px;
     height: 32px;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
     border: none;
     border-radius: 50%;
     color: white;
@@ -669,8 +668,8 @@
     .card-title { font-size: 0.8rem; }
     .back-to-top { bottom: 1rem; right: 1rem; }
   }
-  @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .card { animation: rise 0.5s var(--transition) backwards; }
+  /* removed for perf */
+  .card { contain: layout style paint; }
 </style>
 
 
@@ -1122,14 +1121,14 @@ function renderGrid() {
   const gridHTML = '<div class="grid">' + pageItems.map((s, i) => {
     const genre = allGenres.find(g => g.id === s.genre_id);
     return `
-      <div class="card" style="animation-delay: ${Math.min(i, 15) * 0.03}s">
+      <div class="card">
         <a href="${s.drive_link}" target="_blank" rel="noopener" class="card-cover" data-story-id="${s.id}">
           <img src="${s.cover_url}" alt="${s.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/14141c/5a5a6e?text=No+Cover'">
           ${s.is_hot ? '<div class="card-badge hot">🔥 HOT</div>' : ''}
           ${s.is_completed ? '<div class="card-badge done">✓ FULL</div>' : ''}
           ${s.is_new ? '<div class="card-badge">NEW</div>' : ''}
           <div class="card-overlay">
-            <span class="btn-watch">▶ Xem ngay</span>
+            <span class="btn-watch">📖 Đọc ngay</span>
           </div>
         </a>
         <button class="bookmark-btn active" data-story-id="${s.id}" title="Xóa khỏi bookmark">

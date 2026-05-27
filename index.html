@@ -511,8 +511,8 @@
     text-decoration: none;
     cursor: pointer;
   }
-  .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--transition); }
-  .card:hover .card-cover img { transform: scale(1.08); }
+  .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease-out; }
+  .card:hover .card-cover img { transform: scale(1.04); }
   .card-overlay {
     position: absolute; inset: 0;
     background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 50%);
@@ -531,7 +531,7 @@
   .btn-watch:hover { background: var(--accent-hover); }
   .card-badge {
     position: absolute; top: 0.5rem; left: 0.5rem;
-    background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.85);
     color: white; padding: 0.2rem 0.55rem; border-radius: 50px;
     font-size: 0.7rem; font-weight: 600;
     display: flex; align-items: center; gap: 0.3rem;
@@ -546,7 +546,6 @@
     width: 32px;
     height: 32px;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
     border: none;
     border-radius: 50%;
     color: white;
@@ -663,8 +662,7 @@
     .card-title { font-size: 0.8rem; }
     .back-to-top { bottom: 1rem; right: 1rem; }
   }
-  @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .card { animation: rise 0.5s var(--transition) backwards; }
+  .card { contain: layout style paint; }
 </style>
 </head>
 <body>
@@ -1126,14 +1124,14 @@ async function toggleBookmark(storyId, btn) {
 function cardHTML(item, i) {
   const bookmarked = userBookmarks.has(item.id);
   return `
-    <div class="card" style="animation-delay: ${Math.min(i, 11) * 0.04}s">
+    <div class="card">
       <a href="${item.link}" target="_blank" rel="noopener" class="card-cover" data-story-id="${item.id}" data-title="${item.t}">
         <img src="${item.cover}" alt="${item.t}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/14141c/5a5a6e?text=No+Cover'">
         ${item.hot ? `<div class="card-badge hot">🔥 HOT</div>` : ''}
         ${item.done ? `<div class="card-badge done">✓ FULL</div>` : ''}
         ${item.isNew ? `<div class="card-badge">NEW</div>` : ''}
         <div class="card-overlay">
-          <span class="btn-watch">▶ Xem ngay</span>
+          <span class="btn-watch">📖 Đọc ngay</span>
         </div>
       </a>
       <button class="card-bookmark ${bookmarked ? 'active' : ''}" data-story-id="${item.id}" title="${bookmarked ? 'Bỏ bookmark' : 'Lưu bookmark'}">
@@ -1291,11 +1289,16 @@ async function loadFooterSettings() {
   // logo trong navbar GIỮ NGUYÊN "Trạm Đọc" (theo yêu cầu user)
 }
 
-// Re-render carousel when viewport changes (cards per slide may change)
+// Re-render carousel chỉ khi width thay đổi đủ nhiều (tránh trigger trên scroll mobile)
 let resizeTimer;
+let lastWidth = window.innerWidth;
 window.addEventListener('resize', () => {
+  if (Math.abs(window.innerWidth - lastWidth) < 50) return;
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(renderCarousel, 200);
+  resizeTimer = setTimeout(() => {
+    lastWidth = window.innerWidth;
+    renderCarousel();
+  }, 400);
 });
 
 const themeToggle = document.getElementById('themeToggle');
@@ -1397,19 +1400,21 @@ function setupSearchDropdown(inputId, dropdownId) {
 }
 
 function renderSearchDropdown(q, dropdown) {
-  // Filter tất cả truyện theo từ khóa (substring matching không phân biệt hoa thường, có hỗ trợ unidecode tiếng Việt cơ bản)
-  const matched = allStories.filter(s =>
-    s.t.toLowerCase().includes(q)
-  );
+  // Early-exit: dừng khi đã đủ 5 kết quả thay vì filter cả mảng
+  const top5 = [];
+  for (let i = 0; i < allStories.length && top5.length < 5; i++) {
+    const s = allStories[i];
+    if (s.t.toLowerCase().includes(q)) {
+      top5.push(s);
+    }
+  }
 
-  if (matched.length === 0) {
+  if (top5.length === 0) {
     dropdown.innerHTML = `<div class="search-result-empty">Không tìm thấy truyện nào</div>`;
     dropdown.classList.add('show');
     return;
   }
 
-  // Lấy tối đa 5 truyện đầu
-  const top5 = matched.slice(0, 5);
   let html = top5.map(s => `
     <a href="${s.link}" target="_blank" rel="noopener" class="search-result-item" data-story-id="${s.id}">
       <div class="search-result-thumb" style="background-image: url('${s.cover}')"></div>
