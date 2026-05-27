@@ -33,13 +33,14 @@
   var __session = null;
 
   // ===== AUTH GUARD =====
-  // Chặn truy cập index nếu chưa đăng nhập Supabase
-  (async function() {
+  // Chặn truy cập nếu chưa đăng nhập Supabase
+  // Đồng thời expose Promise __authReady để code khác có thể await
+  window.__authReady = (async function() {
     try {
       const { data } = await sb.auth.getSession();
       if (!data.session) {
         window.location.replace('login.html');
-        return;
+        return false;
       }
       const userData = await sb.auth.getUser();
       if (userData.data && userData.data.user) {
@@ -51,8 +52,10 @@
       }
       // Đã xác thực OK → hiện trang
       document.documentElement.style.visibility = 'visible';
+      return true;
     } catch (e) {
       window.location.replace('login.html');
+      return false;
     }
   })();
 </script>
@@ -972,18 +975,22 @@ function formatViews(n) {
 // ============= LOAD DATA =============
 async function loadData() {
   // Load genres
-  const { data: genresData } = await sb
+  const { data: genresData, error: gErr } = await sb
     .from('genres')
     .select('*')
     .order('display_order', { ascending: true });
+  if (gErr) console.error('[Category] Load genres error:', gErr);
   allGenres = genresData || [];
+  console.log('[Category] Loaded genres:', allGenres.length);
 
   // Load all stories
-  const { data: storiesData } = await sb
+  const { data: storiesData, error: sErr } = await sb
     .from('stories')
     .select('*')
     .order('created_at', { ascending: false });
+  if (sErr) console.error('[Category] Load stories error:', sErr);
   allStories = storiesData || [];
+  console.log('[Category] Loaded stories:', allStories.length);
 
   // Load user bookmarks
   if (__session) {
@@ -998,8 +1005,15 @@ async function loadData() {
 
   // Pre-fill search input từ URL ?q=
   const initialQ = getSearchFromURL();
+  console.log('[Category] URL search query:', initialQ);
   if (initialQ) {
-    document.getElementById('searchInput').value = initialQ;
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.value = initialQ;
+      console.log('[Category] Pre-filled search input');
+    } else {
+      console.error('[Category] searchInput element not found!');
+    }
   }
 
   renderGenreTabs();
@@ -1305,9 +1319,13 @@ function renderUserInfo() {
 }
 renderUserInfo();
 
-// INIT
-loadData();
-loadFooterSettings();
+// INIT — đợi auth xong rồi mới load data (tránh race condition với RLS)
+(async function init() {
+  const ok = await window.__authReady;
+  if (!ok) return;
+  loadData();
+  loadFooterSettings();
+})();
 
 async function loadFooterSettings() {
   const { data } = await sb.from('site_settings').select('*');

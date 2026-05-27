@@ -27,13 +27,13 @@
   var __session = null;
 
   // ===== AUTH GUARD =====
-  // Chặn truy cập index nếu chưa đăng nhập Supabase
-  (async function() {
+  // Chặn truy cập nếu chưa đăng nhập Supabase
+  window.__authReady = (async function() {
     try {
       const { data } = await sb.auth.getSession();
       if (!data.session) {
         window.location.replace('login.html');
-        return;
+        return false;
       }
       const userData = await sb.auth.getUser();
       if (userData.data && userData.data.user) {
@@ -45,8 +45,10 @@
       }
       // Đã xác thực OK → hiện trang
       document.documentElement.style.visibility = 'visible';
+      return true;
     } catch (e) {
       window.location.replace('login.html');
+      return false;
     }
   })();
 </script>
@@ -1275,9 +1277,13 @@ function updateCarousel() {
   track.addEventListener('touchend', onEnd);
 })();
 
-// Init: load tất cả data từ Supabase
-loadAllStories();
-loadFooterSettings();
+// Init: đợi auth xong rồi mới load data
+(async function init() {
+  const ok = await window.__authReady;
+  if (!ok) return;
+  loadAllStories();
+  loadFooterSettings();
+})();
 
 async function loadFooterSettings() {
   const { data } = await sb.from('site_settings').select('*');
