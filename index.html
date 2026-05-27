@@ -1286,13 +1286,9 @@ function updateCarousel() {
   track.addEventListener('touchend', onEnd);
 })();
 
-// Init: đợi auth xong rồi mới load data
-(async function init() {
-  const ok = await window.__authReady;
-  if (!ok) return;
-  loadAllStories();
-  loadFooterSettings();
-})();
+// Init: load song song với auth check (đã mở SELECT TO anon nên không cần chờ auth)
+loadAllStories();
+loadFooterSettings();
 
 async function loadFooterSettings() {
   const { data } = await sb.from('site_settings').select('*');

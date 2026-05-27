@@ -1587,8 +1587,6 @@ async function saveStory() {
   document.querySelectorAll('#storyModal .checkbox-chip input').forEach(c => {
     if (c.checked) tags.push(c.value);
   });
-  console.log('[Admin] Saving tags:', tags);
-  console.log('[Admin] is_hot:', tags.includes('hot'), 'is_new:', tags.includes('new'), 'is_completed:', tags.includes('done'));
 
   // Map UI fields → DB fields
   const dbData = {
@@ -1602,7 +1600,6 @@ async function saveStory() {
     is_new: tags.includes('new'),
     is_completed: tags.includes('done')
   };
-  console.log('[Admin] dbData:', dbData);
 
   // Disable button to prevent double click
   const btnSave = document.querySelector('#storyModal .modal-footer .btn-primary');
