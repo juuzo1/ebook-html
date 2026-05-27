@@ -1288,8 +1288,10 @@ const html = document.documentElement;
 let theme = localStorage.getItem('theme') || 'dark';
 function applyTheme(t) {
   html.setAttribute('data-theme', t);
-  document.getElementById('iconMoon').style.display = t === 'dark' ? 'block' : 'none';
-  document.getElementById('iconSun').style.display = t === 'dark' ? 'none' : 'block';
+  const moon = document.getElementById('themeIconMoon');
+  const sun = document.getElementById('themeIconSun');
+  if (moon) moon.style.display = t === 'dark' ? 'block' : 'none';
+  if (sun) sun.style.display = t === 'dark' ? 'none' : 'block';
   localStorage.setItem('theme', t);
 }
 applyTheme(theme);
