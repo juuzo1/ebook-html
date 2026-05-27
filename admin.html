@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" id="siteFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234a7fff' rx='20'/%3E%3Ctext x='50' y='70' font-size='70' text-anchor='middle' fill='white' font-family='serif' font-weight='bold'%3ET%3C/text%3E%3C/svg%3E">
 <title>Admin — Trạm Đọc</title>
 <!-- Ẩn nội dung trang cho đến khi xác thực admin xong -->
 <style>html { visibility: hidden; }</style>
@@ -1049,10 +1050,6 @@
               <input type="text" class="form-input" id="siteName" value="Trạm Đọc">
             </div>
             <div class="form-row">
-              <label class="form-label">Tagline</label>
-              <input type="text" class="form-input" id="siteTagline" value="Đêm dài không ngủ, mở một chương truyện">
-            </div>
-            <div class="form-row">
               <label class="form-label">Copyright</label>
               <input type="text" class="form-input" id="siteCopyright" value="© 2016 — 2026 Trạm Đọc">
             </div>
@@ -1329,11 +1326,15 @@ async function loadAllData() {
     if (settings.contact_telegram && $('contactTelegram')) $('contactTelegram').value = settings.contact_telegram;
     if (settings.contact_facebook && $('contactFacebook')) $('contactFacebook').value = settings.contact_facebook;
     if (settings.site_name && $('siteName')) $('siteName').value = settings.site_name;
-    if (settings.site_tagline && $('siteTagline')) $('siteTagline').value = settings.site_tagline;
     if (settings.copyright && $('siteCopyright')) $('siteCopyright').value = settings.copyright;
     if (settings.logo_url && $('logoPreview')) {
       $('logoPreview').style.backgroundImage = `url(${settings.logo_url})`;
       $('logoPreview').textContent = '';
+    }
+    // Update favicon (logo trên tab trình duyệt)
+    const favicon = document.getElementById('siteFavicon');
+    if (favicon && settings.logo_url) {
+      favicon.href = settings.logo_url;
     }
   }
 
@@ -2128,12 +2129,10 @@ async function saveContact() {
 
 async function saveSite() {
   const name = document.getElementById('siteName').value.trim();
-  const tagline = document.getElementById('siteTagline').value.trim();
   const copyright = document.getElementById('siteCopyright').value.trim();
 
   const { error } = await sb.from('site_settings').upsert([
     { key: 'site_name', value: name, updated_at: new Date().toISOString() },
-    { key: 'site_tagline', value: tagline, updated_at: new Date().toISOString() },
     { key: 'copyright', value: copyright, updated_at: new Date().toISOString() }
   ]);
   if (error) { toast('Lỗi: ' + error.message, 'danger'); return; }
