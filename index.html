@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" id="siteFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234a7fff' rx='20'/%3E%3Ctext x='50' y='70' font-size='70' text-anchor='middle' fill='white' font-family='serif' font-weight='bold'%3ET%3C/text%3E%3C/svg%3E">
+<script>
+  // Set favicon từ localStorage NGAY khi load (không cần đợi Supabase)
+  try {
+    const cachedFaviconURL = localStorage.getItem('site_logo_url');
+    if (cachedFaviconURL) {
+      document.getElementById('siteFavicon').href = cachedFaviconURL;
+    }
+  } catch (e) {}
+</script>
 <title>Trạm Đọc — Đọc sách điện tử trực tuyến</title>
 <!-- Ẩn nội dung trang cho đến khi xác thực xong -->
 <style>html { visibility: hidden; }</style>
@@ -1284,6 +1293,9 @@ async function loadFooterSettings() {
   const favicon = document.getElementById('siteFavicon');
   if (favicon && settings.logo_url) {
     favicon.href = settings.logo_url;
+    try { localStorage.setItem('site_logo_url', settings.logo_url); } catch (e) {}
+  } else if (!settings.logo_url) {
+    try { localStorage.removeItem('site_logo_url'); } catch (e) {}
   }
   // Update site_name → chỉ đổi text trong các trang khác,
   // logo trong navbar GIỮ NGUYÊN "Trạm Đọc" (theo yêu cầu user)
