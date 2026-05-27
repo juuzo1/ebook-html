@@ -548,6 +548,31 @@
     padding: 1.5rem;
   }
 
+  .emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    max-width: 100%;
+  }
+  .emoji-picker button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.15s ease;
+    padding: 0;
+    line-height: 1;
+  }
+  .emoji-picker button:hover {
+    background: var(--accent);
+    transform: scale(1.1);
+    border-color: var(--accent);
+  }
+
   .modal-footer {
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border);
@@ -1154,7 +1179,8 @@
       <div class="form-row two-col">
         <div>
           <label class="form-label">Icon (emoji)</label>
-          <input type="text" class="form-input" id="genreIcon" maxlength="2" placeholder="📖">
+          <input type="text" class="form-input" id="genreIcon" placeholder="📖" autocomplete="off">
+          <div class="emoji-picker" id="emojiPicker"></div>
         </div>
         <div>
           <label class="form-label">Slug</label>
@@ -1843,12 +1869,24 @@ function renderGenres() {
   }).join('');
 }
 
+// Emoji picker cho thể loại
+const COMMON_EMOJIS = ['📖', '📚', '📕', '📗', '📘', '📙', '🕵️', '⚔️', '🗡️', '🛡️', '💕', '💖', '🌸', '🌹', '🎭', '🎬', '🎨', '🎮', '🏰', '🐉', '🧙', '👻', '🌙', '⭐', '🔥', '⚡', '🌊', '🍃', '🏯', '🎌', '🌌', '🦋'];
+
+function renderEmojiPicker() {
+  const picker = document.getElementById('emojiPicker');
+  if (!picker) return;
+  picker.innerHTML = COMMON_EMOJIS.map(e =>
+    `<button type="button" onclick="document.getElementById('genreIcon').value='${e}'">${e}</button>`
+  ).join('');
+}
+
 function openGenreModal() {
   document.getElementById('genreModalTitle').textContent = 'Thêm thể loại';
   document.getElementById('genreId').value = '';
   document.getElementById('genreIcon').value = '';
   document.getElementById('genreSlug').value = '';
   document.getElementById('genreName').value = '';
+  renderEmojiPicker();
   openModal('genreModal');
 }
 
@@ -1859,6 +1897,7 @@ function editGenre(id) {
   document.getElementById('genreIcon').value = g.icon;
   document.getElementById('genreSlug').value = g.slug;
   document.getElementById('genreName').value = g.name;
+  renderEmojiPicker();
   openModal('genreModal');
 }
 
