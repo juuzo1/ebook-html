@@ -15,6 +15,16 @@
 </script>
 <title>Trạm Đọc — Đọc sách điện tử trực tuyến</title>
 <!-- Ẩn nội dung trang cho đến khi xác thực xong -->
+<!-- Warm-up DB Supabase ngay khi load HTML (đánh thức từ cold start) -->
+<script>
+  // Fetch REST endpoint nhẹ để wake up Supabase free tier
+  fetch('https://fkqzwvngyusyuczfakud.supabase.co/rest/v1/genres?select=id&limit=1', {
+    headers: {
+      'apikey': 'sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_',
+      'Authorization': 'Bearer sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_'
+    }
+  }).catch(() => {});
+</script>
 <!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -924,14 +934,14 @@ async function loadAllStories() {
   const t0 = performance.now();
 
   // 1. Đọc cache → render ngay (0ms, không cần đợi network)
-  let hasCachedData = false;
+  let cachedSig = null;
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const { genres, stories, bookmarks, ts } = JSON.parse(cached);
       if (Date.now() - ts < 5 * 60 * 1000) {
         processData(genres, stories, bookmarks || []);
-        hasCachedData = true;
+        cachedSig = JSON.stringify({ g: genres.length, s: stories.length, b: (bookmarks||[]).length, t: stories.map(x => x.id + '_' + x.view_count) });
         console.log(`[Perf] ⚡ Cache rendered in ${(performance.now() - t0).toFixed(0)}ms`);
       }
     }
@@ -965,9 +975,14 @@ async function loadAllStories() {
     }));
   } catch (e) {}
 
-  // Render lại với data mới
-  processData(genresData, storiesData, bookmarksData);
-  console.log(`[Perf] ✅ Total load time: ${(performance.now() - t0).toFixed(0)}ms`);
+  // CHỈ render lại nếu data thực sự khác cache (tránh nháy không cần thiết)
+  const freshSig = JSON.stringify({ g: genresData.length, s: storiesData.length, b: bookmarksData.length, t: storiesData.map(x => x.id + '_' + x.view_count) });
+  if (freshSig !== cachedSig) {
+    processData(genresData, storiesData, bookmarksData);
+    console.log(`[Perf] ✅ Total load time: ${(performance.now() - t0).toFixed(0)}ms (data changed, re-rendered)`);
+  } else {
+    console.log(`[Perf] ✅ Total load time: ${(performance.now() - t0).toFixed(0)}ms (cache valid, no re-render)`);
+  }
 }
 
 // Cập nhật dropdown thể loại trong navbar (desktop + mobile)

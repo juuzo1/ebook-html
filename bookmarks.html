@@ -14,6 +14,16 @@
   } catch (e) {}
 </script>
 <title>Bookmark — Trạm Đọc</title>
+<!-- Warm-up DB Supabase ngay khi load HTML (đánh thức từ cold start) -->
+<script>
+  // Fetch REST endpoint nhẹ để wake up Supabase free tier
+  fetch('https://fkqzwvngyusyuczfakud.supabase.co/rest/v1/genres?select=id&limit=1', {
+    headers: {
+      'apikey': 'sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_',
+      'Authorization': 'Bearer sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_'
+    }
+  }).catch(() => {});
+</script>
 <!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
