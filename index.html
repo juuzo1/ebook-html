@@ -701,6 +701,7 @@
     .tabs { margin-left: 0; width: 100%; }
     .card-title { font-size: 0.75rem; }
     .card-meta { font-size: 0.7rem; }
+    .card-meta-views { display: none; }
     .card-badge { font-size: 0.6rem; padding: 0.15rem 0.4rem; }
     .card-bookmark { width: 28px; height: 28px; opacity: 1; }
     .card-bookmark svg { width: 14px; height: 14px; }
@@ -1205,8 +1206,8 @@ function cardHTML(item, i) {
       <div class="card-title">${item.t}</div>
       <div class="card-meta">
         <span>${item.g}</span>
-        <span class="dot">•</span>
-        <span>👁 ${item.v}</span>
+        <span class="dot card-meta-views">•</span>
+        <span class="card-meta-views">👁 ${item.v}</span>
       </div>
     </div>
   `;

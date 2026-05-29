@@ -694,6 +694,7 @@
     .tabs { margin-left: 0; width: 100%; }
     .card-title { font-size: 0.75rem; }
     .card-meta { font-size: 0.7rem; }
+    .card-meta-views { display: none; }
     .card-badge { font-size: 0.6rem; padding: 0.15rem 0.4rem; }
     .card-bookmark { width: 28px; height: 28px; opacity: 1; }
     .card-bookmark svg { width: 14px; height: 14px; }
@@ -1190,8 +1191,8 @@ function renderGrid() {
         <div class="card-title">${s.title}</div>
         <div class="card-meta">
           <span>${genreText}</span>
-          <span class="dot">•</span>
-          <span>👁 ${formatViews(s.view_count)}</span>
+          <span class="dot card-meta-views">•</span>
+          <span class="card-meta-views">👁 ${formatViews(s.view_count)}</span>
         </div>
       </div>
     `;
