@@ -24,6 +24,11 @@
   const SUPABASE_KEY = 'sb_publishable__TlWI8r-6Ym0V23nMAUCZg_LQTCXeb_';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Clear cache trang public khi admin thay đổi data
+function clearPublicCache() {
+  try { localStorage.removeItem('tramdoc_data_v1'); } catch (e) {}
+}
+
   // AUTH GUARD: phải login Supabase VÀ có role admin
   (async function() {
     try {
@@ -732,6 +737,34 @@
     color: var(--accent);
     font-weight: 600;
   }
+  .genre-multiselect {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .genre-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 0.45rem 0.9rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: color var(--transition), background var(--transition), border-color var(--transition);
+    user-select: none;
+  }
+  .genre-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+  .genre-chip.selected {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
 
   /* Toast */
   .toast {
@@ -1113,15 +1146,14 @@
         <input type="text" class="form-input" id="storyTitle" placeholder="VD: Bí Mật Của Đêm Mưa">
       </div>
 
-      <div class="form-row two-col">
-        <div>
-          <label class="form-label">Thể loại *</label>
-          <select class="form-select" id="storyGenre"></select>
-        </div>
-        <div>
-          <label class="form-label">Tác giả</label>
-          <input type="text" class="form-input" id="storyAuthor" placeholder="Tên tác giả">
-        </div>
+      <div class="form-row">
+        <label class="form-label">Thể loại * <span style="color: var(--text-muted); font-weight:400; font-size:0.85rem;">(có thể chọn nhiều)</span></label>
+        <div class="genre-multiselect" id="storyGenres"></div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Tác giả</label>
+        <input type="text" class="form-input" id="storyAuthor" placeholder="Tên tác giả">
       </div>
 
       <div class="form-row">
@@ -1324,24 +1356,32 @@ async function loadAllData() {
     genres = g || [];
   }
 
-  // Stories
-  const { data: s, error: sErr } = await sb
-    .from('stories')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (sErr) {
-    console.error('Load stories error:', sErr);
-    toast('Lỗi load truyện: ' + sErr.message, 'danger');
+  // Stories + story_genres (cho phép nhiều thể loại)
+  const [sRes, sgRes] = await Promise.all([
+    sb.from('stories').select('*').order('created_at', { ascending: false }),
+    sb.from('story_genres').select('story_id, genre_id')
+  ]);
+  if (sRes.error) {
+    console.error('Load stories error:', sRes.error);
+    toast('Lỗi load truyện: ' + sRes.error.message, 'danger');
   } else {
+    // Map story_id → array genre_id
+    const genresByStory = {};
+    (sgRes.data || []).forEach(row => {
+      if (!genresByStory[row.story_id]) genresByStory[row.story_id] = [];
+      genresByStory[row.story_id].push(row.genre_id);
+    });
+
     // Map DB fields → UI fields
-    stories = (s || []).map(row => ({
+    stories = (sRes.data || []).map(row => ({
       id: row.id,
       title: row.title,
       author: row.author,
       desc: row.description,
       link: row.drive_link,
       cover: row.cover_url,
-      genreId: row.genre_id,
+      genreId: row.genre_id, // legacy, vẫn giữ cho compat
+      genreIds: genresByStory[row.id] || (row.genre_id ? [row.genre_id] : []),
       views: row.view_count || 0,
       tags: [
         ...(row.is_hot ? ['hot'] : []),
@@ -1482,7 +1522,7 @@ function renderStories() {
 
   let filtered = stories.filter(s => {
     if (search && !s.title.toLowerCase().includes(search)) return false;
-    if (genreFilter && String(s.genreId) !== genreFilter) return false;
+    if (genreFilter && !(s.genreIds || []).includes(parseInt(genreFilter))) return false;
     if (statusFilter && !s.tags.includes(statusFilter)) return false;
     return true;
   });
@@ -1494,7 +1534,10 @@ function renderStories() {
   }
 
   tbody.innerHTML = filtered.map(s => {
-    const genre = genres.find(g => g.id === s.genreId);
+    const storyGenres = (s.genreIds || []).map(gid => genres.find(g => g.id === gid)).filter(Boolean);
+    const genreText = storyGenres.length > 0
+      ? storyGenres.map(g => `${g.icon} ${g.name}`).join(', ')
+      : '-';
     const chips = s.tags.map(t => {
       const labels = { hot: '🔥 Hot', new: '✦ Mới', done: '✓ Full' };
       return `<span class="chip ${t}">${labels[t]}</span>`;
@@ -1506,7 +1549,7 @@ function renderStories() {
           <span class="cell-title">${s.title}</span>
           <span class="cell-sub">${s.author || 'Không rõ tác giả'}</span>
         </td>
-        <td>${genre ? genre.icon + ' ' + genre.name : '-'}</td>
+        <td>${genreText}</td>
         <td>${chips || '<span class="cell-sub">—</span>'}</td>
         <td style="text-align:right; color: var(--text-secondary); font-variant-numeric: tabular-nums;">${s.views.toLocaleString()}</td>
         <td>
@@ -1528,6 +1571,18 @@ document.getElementById('searchStories').addEventListener('input', renderStories
 document.getElementById('filterGenre').addEventListener('change', renderStories);
 document.getElementById('filterStatus').addEventListener('change', renderStories);
 
+function renderGenreChips(selectedIds = []) {
+  const container = document.getElementById('storyGenres');
+  if (!container) return;
+  container.innerHTML = genres.map(g =>
+    `<div class="genre-chip ${selectedIds.includes(g.id) ? 'selected' : ''}" data-genre-id="${g.id}">${g.icon} ${g.name}</div>`
+  ).join('');
+  // Bind click
+  container.querySelectorAll('.genre-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+}
+
 function openStoryModal() {
   document.getElementById('storyModalTitle').textContent = 'Thêm truyện mới';
   document.getElementById('storyId').value = '';
@@ -1541,9 +1596,8 @@ function openStoryModal() {
     c.classList.remove('checked');
     c.querySelector('input').checked = false;
   });
-  // Populate genre select
-  const sel = document.getElementById('storyGenre');
-  sel.innerHTML = genres.map(g => `<option value="${g.id}">${g.icon} ${g.name}</option>`).join('');
+  // Render genre chips, không chọn cái nào
+  renderGenreChips([]);
   openModal('storyModal');
 }
 
@@ -1561,8 +1615,8 @@ function editStory(id) {
   preview.style.backgroundImage = `url(${s.cover})`;
   preview.classList.add('show');
 
-  const sel = document.getElementById('storyGenre');
-  sel.innerHTML = genres.map(g => `<option value="${g.id}" ${g.id === s.genreId ? 'selected' : ''}>${g.icon} ${g.name}</option>`).join('');
+  // Render genre chips, chọn các thể loại đang có
+  renderGenreChips(s.genreIds || []);
 
   document.querySelectorAll('#storyModal .checkbox-chip').forEach(c => {
     const v = c.querySelector('input').value;
@@ -1588,6 +1642,16 @@ async function saveStory() {
     if (c.checked) tags.push(c.value);
   });
 
+  // Lấy danh sách thể loại đã chọn
+  const selectedGenreIds = Array.from(
+    document.querySelectorAll('#storyGenres .genre-chip.selected')
+  ).map(c => parseInt(c.dataset.genreId));
+
+  if (selectedGenreIds.length === 0) {
+    toast('Vui lòng chọn ít nhất 1 thể loại', 'danger');
+    return;
+  }
+
   // Map UI fields → DB fields
   const dbData = {
     title,
@@ -1595,7 +1659,7 @@ async function saveStory() {
     description: document.getElementById('storyDesc').value.trim() || null,
     drive_link: link,
     cover_url: cover,
-    genre_id: parseInt(document.getElementById('storyGenre').value) || null,
+    genre_id: selectedGenreIds[0], // legacy field: lưu thể loại đầu tiên
     is_hot: tags.includes('hot'),
     is_new: tags.includes('new'),
     is_completed: tags.includes('done')
@@ -1605,6 +1669,7 @@ async function saveStory() {
   const btnSave = document.querySelector('#storyModal .modal-footer .btn-primary');
   btnSave.disabled = true;
 
+  let storyId;
   if (id) {
     // Update
     const { error } = await sb.from('stories').update(dbData).eq('id', parseInt(id));
@@ -1613,18 +1678,7 @@ async function saveStory() {
       btnSave.disabled = false;
       return;
     }
-    // Update local cache
-    const s = stories.find(x => x.id === parseInt(id));
-    if (s) {
-      s.title = title;
-      s.author = dbData.author;
-      s.desc = dbData.description;
-      s.link = link;
-      s.cover = cover;
-      s.genreId = dbData.genre_id;
-      s.tags = tags;
-    }
-    toast('Đã cập nhật truyện');
+    storyId = parseInt(id);
   } else {
     // Insert
     const { data, error } = await sb.from('stories').insert(dbData).select().single();
@@ -1633,18 +1687,48 @@ async function saveStory() {
       btnSave.disabled = false;
       return;
     }
-    // Add to local cache
+    storyId = data.id;
+  }
+
+  // Cập nhật bảng nối story_genres: xóa cũ, insert mới
+  await sb.from('story_genres').delete().eq('story_id', storyId);
+  const sgRows = selectedGenreIds.map(genre_id => ({ story_id: storyId, genre_id }));
+  if (sgRows.length > 0) {
+    const { error: sgErr } = await sb.from('story_genres').insert(sgRows);
+    if (sgErr) {
+      console.error('story_genres insert error:', sgErr);
+    }
+  }
+
+  // Update local cache
+  if (id) {
+    const s = stories.find(x => x.id === parseInt(id));
+    if (s) {
+      s.title = title;
+      s.author = dbData.author;
+      s.desc = dbData.description;
+      s.link = link;
+      s.cover = cover;
+      s.genreId = dbData.genre_id;
+      s.genreIds = selectedGenreIds;
+      s.tags = tags;
+    }
+    clearPublicCache();
+    toast('Đã cập nhật truyện');
+  } else {
     stories.unshift({
-      id: data.id,
-      title: data.title,
-      author: data.author,
-      desc: data.description,
-      link: data.drive_link,
-      cover: data.cover_url,
-      genreId: data.genre_id,
+      id: storyId,
+      title,
+      author: dbData.author,
+      desc: dbData.description,
+      link,
+      cover,
+      genreId: dbData.genre_id,
+      genreIds: selectedGenreIds,
       views: 0,
       tags
     });
+    clearPublicCache();
     toast('Đã thêm truyện mới');
   }
 
@@ -1671,6 +1755,7 @@ function confirmDeleteStory(id) {
     closeModal('confirmModal');
     renderStories();
     updateCounts();
+    clearPublicCache();
     toast('Đã xóa truyện');
   };
   openModal('confirmModal');
@@ -1932,12 +2017,14 @@ async function saveGenre() {
     btnSave.disabled = false;
     if (error) { toast('Lỗi: ' + error.message, 'danger'); return; }
     Object.assign(genres.find(x => x.id === parseInt(id)), dbData);
+    clearPublicCache();
     toast('Đã cập nhật thể loại');
   } else {
     const { data, error } = await sb.from('genres').insert(dbData).select().single();
     btnSave.disabled = false;
     if (error) { toast('Lỗi: ' + error.message, 'danger'); return; }
     genres.push(data);
+    clearPublicCache();
     toast('Đã thêm thể loại');
   }
   closeModal('genreModal');

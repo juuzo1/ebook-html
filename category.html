@@ -212,7 +212,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0.5rem;
-    min-width: 200px;
+    min-width: 260px;
     opacity: 0;
     pointer-events: none;
     transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
@@ -231,6 +231,7 @@
     text-decoration: none;
     font-size: 0.9rem;
     border-radius: 8px;
+    white-space: nowrap;
     transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .dropdown-menu a:hover { background: var(--bg-elevated); color: var(--accent); }
@@ -1022,15 +1023,24 @@ async function loadData() {
   } catch (e) {}
 
   // 2. Fetch fresh data
-  const [genresRes, storiesRes, bookmarksRes] = await Promise.all([
+  const [genresRes, storiesRes, bookmarksRes, sgRes] = await Promise.all([
     sb.from('genres').select('*').order('display_order', { ascending: true }),
     sb.from('stories').select('*').order('created_at', { ascending: false }),
-    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] })
+    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] }),
+    sb.from('story_genres').select('story_id, genre_id')
   ]);
 
   const genresData = genresRes.data || [];
   const storiesData = storiesRes.data || [];
   const bookmarksData = bookmarksRes.data || [];
+
+  // Gắn _genreIds vào mỗi story
+  const gByStory = {};
+  (sgRes.data || []).forEach(row => {
+    if (!gByStory[row.story_id]) gByStory[row.story_id] = [];
+    gByStory[row.story_id].push(row.genre_id);
+  });
+  storiesData.forEach(s => { s._genreIds = gByStory[s.id] || []; });
 
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -1101,11 +1111,14 @@ function updatePageHeader() {
 function applyFilterAndRender(resetPage = true) {
   let list = allStories;
 
-  // Filter by genre
+  // Filter by genre - dùng _genreIds (multi) hoặc fallback genre_id
   if (currentGenreSlug) {
     const genre = allGenres.find(g => g.slug === currentGenreSlug);
     if (genre) {
-      list = list.filter(s => s.genre_id === genre.id);
+      list = list.filter(s => {
+        const gids = s._genreIds && s._genreIds.length > 0 ? s._genreIds : (s.genre_id ? [s.genre_id] : []);
+        return gids.includes(genre.id);
+      });
     }
   }
 
@@ -1155,7 +1168,12 @@ function renderGrid() {
   const pageItems = displayed.slice(start, start + PAGE_SIZE);
 
   grid.innerHTML = pageItems.map((s, i) => {
-    const genre = allGenres.find(g => g.id === s.genre_id);
+    const gids = s._genreIds && s._genreIds.length > 0 ? s._genreIds : (s.genre_id ? [s.genre_id] : []);
+    const genreNames = gids.map(gid => {
+      const g = allGenres.find(x => x.id === gid);
+      return g ? g.name : null;
+    }).filter(Boolean);
+    const genreText = genreNames.length > 0 ? genreNames.join(', ') : 'Khác';
     const bookmarked = userBookmarks.has(s.id);
     return `
       <div class="card">
@@ -1173,7 +1191,7 @@ function renderGrid() {
         </button>
         <div class="card-title">${s.title}</div>
         <div class="card-meta">
-          <span>${genre ? genre.name : 'Khác'}</span>
+          <span>${genreText}</span>
           <span class="dot">•</span>
           <span>👁 ${formatViews(s.view_count)}</span>
         </div>

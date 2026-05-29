@@ -219,7 +219,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0.5rem;
-    min-width: 200px;
+    min-width: 260px;
     opacity: 0;
     pointer-events: none;
     transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
@@ -238,6 +238,7 @@
     text-decoration: none;
     font-size: 0.9rem;
     border-radius: 8px;
+    white-space: nowrap;
     transition: color var(--transition), background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
   }
   .dropdown-menu a:hover { background: var(--bg-elevated); color: var(--accent); }
@@ -892,11 +893,17 @@ function formatViews(n) {
 
 // Map DB row → UI item
 function mapStory(row) {
-  const genre = allGenres.find(g => g.id === row.genre_id);
+  // row._genreIds là array genre_id từ JOIN story_genres
+  const gids = row._genreIds && row._genreIds.length > 0 ? row._genreIds : (row.genre_id ? [row.genre_id] : []);
+  const genreNames = gids.map(gid => {
+    const g = allGenres.find(x => x.id === gid);
+    return g ? g.name : null;
+  }).filter(Boolean);
   return {
     id: row.id,
     t: row.title,
-    g: genre ? genre.name : 'Không phân loại',
+    g: genreNames.length > 0 ? genreNames.join(', ') : 'Không phân loại',
+    genreIds: gids,
     v: formatViews(row.view_count || 0),
     link: row.drive_link,
     cover: row.cover_url,
@@ -950,10 +957,11 @@ async function loadAllStories() {
 
   // 2. Fetch fresh data nền (parallel)
   const tFetch = performance.now();
-  const [genresRes, storiesRes, bookmarksRes] = await Promise.all([
+  const [genresRes, storiesRes, bookmarksRes, sgRes] = await Promise.all([
     sb.from('genres').select('*').order('display_order', { ascending: true }),
     sb.from('stories').select('*').order('created_at', { ascending: false }),
-    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] })
+    __session ? sb.from('bookmarks').select('story_id') : Promise.resolve({ data: [] }),
+    sb.from('story_genres').select('story_id, genre_id')
   ]);
   console.log(`[Perf] 🌐 Supabase fetch: ${(performance.now() - tFetch).toFixed(0)}ms`);
 
@@ -961,6 +969,16 @@ async function loadAllStories() {
     console.error('Load stories error:', storiesRes.error);
     return;
   }
+
+  // Gắn _genreIds vào mỗi story
+  const genresByStory = {};
+  (sgRes.data || []).forEach(row => {
+    if (!genresByStory[row.story_id]) genresByStory[row.story_id] = [];
+    genresByStory[row.story_id].push(row.genre_id);
+  });
+  (storiesRes.data || []).forEach(s => {
+    s._genreIds = genresByStory[s.id] || [];
+  });
 
   const genresData = genresRes.data || [];
   const storiesData = storiesRes.data || [];
