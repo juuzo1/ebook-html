@@ -1169,11 +1169,9 @@ function renderGrid() {
 
   grid.innerHTML = pageItems.map((s, i) => {
     const gids = s._genreIds && s._genreIds.length > 0 ? s._genreIds : (s.genre_id ? [s.genre_id] : []);
-    const genreNames = gids.map(gid => {
-      const g = allGenres.find(x => x.id === gid);
-      return g ? g.name : null;
-    }).filter(Boolean);
-    const genreText = genreNames.length > 0 ? genreNames.join(', ') : 'Khác';
+    // Chỉ hiện thể loại đầu tiên
+    const primary = gids.length > 0 ? allGenres.find(x => x.id === gids[0]) : null;
+    const genreText = primary ? primary.name : 'Khác';
     const bookmarked = userBookmarks.has(s.id);
     return `
       <div class="card">

@@ -895,14 +895,12 @@ function formatViews(n) {
 function mapStory(row) {
   // row._genreIds là array genre_id từ JOIN story_genres
   const gids = row._genreIds && row._genreIds.length > 0 ? row._genreIds : (row.genre_id ? [row.genre_id] : []);
-  const genreNames = gids.map(gid => {
-    const g = allGenres.find(x => x.id === gid);
-    return g ? g.name : null;
-  }).filter(Boolean);
+  // Chỉ lấy thể loại đầu tiên (primary genre) để hiển thị
+  const primaryGenre = gids.length > 0 ? allGenres.find(x => x.id === gids[0]) : null;
   return {
     id: row.id,
     t: row.title,
-    g: genreNames.length > 0 ? genreNames.join(', ') : 'Không phân loại',
+    g: primaryGenre ? primaryGenre.name : 'Không phân loại',
     genreIds: gids,
     v: formatViews(row.view_count || 0),
     link: row.drive_link,
@@ -1041,32 +1039,39 @@ function applyFilter(list) {
 }
 
 // Pagination state cho 3 section
-const PAGE_SIZE = 25;
-let pageState = { new: 1, hot: 1, done: 1 };
+// Số truyện hiển thị mỗi mục theo screen size
+// Desktop: 5 cột × 3 hàng = 15
+// Mobile: 3 cột × 3 hàng = 9
+// Narrow (≤380): 2 cột × 3 hàng = 6
+function getSectionLimit() {
+  if (window.innerWidth <= 380) return 6;
+  if (window.innerWidth <= 640) return 9;
+  return 15;
+}
 
 function renderAll() {
   renderCarousel();
-  renderSection('grid-new', 'pagination-new', applyFilter(dataNew), 'new');
-  renderSection('grid-hot', 'pagination-hot', applyFilter(dataHot), 'hot');
-  renderSection('grid-done', 'pagination-done', applyFilter(dataDone), 'done');
+  renderSection('grid-new', 'pagination-new', applyFilter(dataNew));
+  renderSection('grid-hot', 'pagination-hot', applyFilter(dataHot));
+  renderSection('grid-done', 'pagination-done', applyFilter(dataDone));
 }
 
-function renderSection(gridId, paginationId, items, key) {
+function renderSection(gridId, paginationId, items) {
   const el = document.getElementById(gridId);
   const paginationEl = document.getElementById(paginationId);
   if (!el) return;
 
+  // Luôn xóa pagination (không dùng nữa)
+  if (paginationEl) paginationEl.innerHTML = '';
+
   if (items.length === 0) {
     el.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Chưa có truyện nào</div>`;
-    if (paginationEl) paginationEl.innerHTML = '';
     return;
   }
 
-  const totalPages = Math.ceil(items.length / PAGE_SIZE);
-  if (pageState[key] > totalPages) pageState[key] = totalPages;
-  if (pageState[key] < 1) pageState[key] = 1;
-  const start = (pageState[key] - 1) * PAGE_SIZE;
-  const pageItems = items.slice(start, start + PAGE_SIZE);
+  // Lấy đúng số lượng theo screen, ưu tiên truyện up trước (items đã sort created_at DESC sẵn)
+  const limit = getSectionLimit();
+  const pageItems = items.slice(0, limit);
 
   el.innerHTML = pageItems.map((item, i) => cardHTML(item, i)).join('');
 
@@ -1086,16 +1091,6 @@ function renderSection(gridId, paginationId, items, key) {
       await toggleBookmark(id, btn);
     });
   });
-
-  // Pagination
-  if (paginationEl) {
-    renderPaginationSection(paginationEl, totalPages, pageState[key], (newPage) => {
-      pageState[key] = newPage;
-      renderSection(gridId, paginationId, items, key);
-      // Scroll lên đầu section
-      el.closest('.section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
 }
 
 function renderPaginationSection(el, totalPages, current, onChange) {
@@ -1219,7 +1214,8 @@ function cardHTML(item, i) {
 
 // ===== CAROUSEL: Được Đọc Nhiều =====
 function getCardsPerSlide() {
-  if (window.innerWidth <= 640) return 2;
+  if (window.innerWidth <= 380) return 2;
+  if (window.innerWidth <= 640) return 3;
   if (window.innerWidth <= 1024) return 4;
   return 6;
 }
@@ -1362,7 +1358,7 @@ async function loadFooterSettings() {
   // logo trong navbar GIỮ NGUYÊN "Trạm Đọc" (theo yêu cầu user)
 }
 
-// Re-render carousel chỉ khi width thay đổi đủ nhiều (tránh trigger trên scroll mobile)
+// Re-render carousel + sections khi width thay đổi
 let resizeTimer;
 let lastWidth = window.innerWidth;
 window.addEventListener('resize', () => {
@@ -1370,7 +1366,7 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     lastWidth = window.innerWidth;
-    renderCarousel();
+    renderAll();
   }, 400);
 });
 
