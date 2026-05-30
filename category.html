@@ -925,6 +925,7 @@
 <div class="filter-bar">
   <input type="text" class="filter-search" id="searchInput" placeholder="Tìm truyện theo tên trong thể loại này...">
   <select class="sort-select" id="sortSelect">
+    <option value="order">Thứ tự ưu tiên</option>
     <option value="newest">Mới nhất</option>
     <option value="popular">Xem nhiều nhất</option>
     <option value="title">Tên A-Z</option>
@@ -1132,7 +1133,16 @@ function applyFilterAndRender(resetPage = true) {
 
   // Sort
   const sort = document.getElementById('sortSelect').value;
-  if (sort === 'newest') {
+  if (sort === 'order') {
+    list = [...list].sort((a, b) => {
+      const ao = a.display_order;
+      const bo = b.display_order;
+      if (ao == null && bo == null) return new Date(b.created_at) - new Date(a.created_at);
+      if (ao == null) return 1;
+      if (bo == null) return -1;
+      return ao - bo;
+    });
+  } else if (sort === 'newest') {
     list = [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   } else if (sort === 'popular') {
     list = [...list].sort((a, b) => (b.view_count || 0) - (a.view_count || 0));

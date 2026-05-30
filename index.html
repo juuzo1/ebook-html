@@ -904,6 +904,7 @@ function mapStory(row) {
     t: row.title,
     g: primaryGenre ? primaryGenre.name : 'Không phân loại',
     genreIds: gids,
+    displayOrder: row.display_order,
     v: formatViews(row.view_count || 0),
     link: row.drive_link,
     cover: row.cover_url,
@@ -911,6 +912,16 @@ function mapStory(row) {
     done: row.is_completed,
     isNew: row.is_new
   };
+}
+
+// So sánh theo display_order (null = cuối), tie-break theo created_at giữ nguyên thứ tự allStories
+function compareByOrder(a, b) {
+  const ao = a.displayOrder;
+  const bo = b.displayOrder;
+  if (ao == null && bo == null) return 0;
+  if (ao == null) return 1;
+  if (bo == null) return -1;
+  return ao - bo;
 }
 
 // Cache key
@@ -927,9 +938,9 @@ function processData(genresData, storiesData, bookmarksData) {
     return (bRow?.view_count || 0) - (aRow?.view_count || 0);
   }).slice(0, 18);
 
-  dataNew = allStories.filter(s => s.isNew);
-  dataHot = allStories.filter(s => s.hot);
-  dataDone = allStories.filter(s => s.done);
+  dataNew = allStories.filter(s => s.isNew).sort(compareByOrder);
+  dataHot = allStories.filter(s => s.hot).sort(compareByOrder);
+  dataDone = allStories.filter(s => s.done).sort(compareByOrder);
 
   userBookmarks = new Set((bookmarksData || []).map(b => b.story_id));
 

@@ -1001,6 +1001,7 @@ function clearPublicCache() {
                 <th>Truyện</th>
                 <th>Thể loại</th>
                 <th>Trạng thái</th>
+                <th style="text-align:center; width:90px">Thứ tự</th>
                 <th style="text-align:right">Lượt xem</th>
                 <th style="text-align:right; width:120px">Hành động</th>
               </tr>
@@ -1382,6 +1383,7 @@ async function loadAllData() {
       cover: row.cover_url,
       genreId: row.genre_id, // legacy, vẫn giữ cho compat
       genreIds: genresByStory[row.id] || (row.genre_id ? [row.genre_id] : []),
+      displayOrder: row.display_order,
       views: row.view_count || 0,
       tags: [
         ...(row.is_hot ? ['hot'] : []),
@@ -1551,6 +1553,9 @@ function renderStories() {
         </td>
         <td>${genreText}</td>
         <td>${chips || '<span class="cell-sub">—</span>'}</td>
+        <td style="text-align:center;">
+          <input type="number" class="order-input" data-story-id="${s.id}" value="${s.displayOrder ?? ''}" placeholder="—" min="0" style="width:70px; padding:0.4rem; text-align:center; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-variant-numeric: tabular-nums;">
+        </td>
         <td style="text-align:right; color: var(--text-secondary); font-variant-numeric: tabular-nums;">${s.views.toLocaleString()}</td>
         <td>
           <div class="actions">
@@ -1565,6 +1570,34 @@ function renderStories() {
       </tr>
     `;
   }).join('');
+
+  // Bind event cho input thứ tự - lưu khi user blur hoặc Enter
+  tbody.querySelectorAll('.order-input').forEach(input => {
+    const save = async () => {
+      const storyId = parseInt(input.dataset.storyId);
+      const val = input.value.trim();
+      const newOrder = val === '' ? null : parseInt(val);
+      const story = stories.find(x => x.id === storyId);
+      if (!story) return;
+      if (story.displayOrder === newOrder) return;
+
+      input.disabled = true;
+      const { error } = await sb.from('stories').update({ display_order: newOrder }).eq('id', storyId);
+      input.disabled = false;
+      if (error) {
+        toast('Lỗi cập nhật thứ tự: ' + error.message, 'danger');
+        input.value = story.displayOrder ?? '';
+        return;
+      }
+      story.displayOrder = newOrder;
+      clearPublicCache();
+      toast(`Đã lưu thứ tự ${newOrder ?? '—'} cho "${story.title}"`);
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    });
+  });
 }
 
 document.getElementById('searchStories').addEventListener('input', renderStories);
